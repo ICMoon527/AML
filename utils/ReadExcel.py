@@ -34,5 +34,5 @@ class ReadExcel():
         print(df)
 
 if __name__ == '__main__':
-    object = ReadExcel('data/Second_part.xlsx')
+    object = ReadExcel('Data/FinalSheet.xlsx')
     object.cvt2csv()
