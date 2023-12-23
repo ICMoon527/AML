@@ -10,10 +10,11 @@ class GasDataset(Dataset):
         self.isTrain = isTrain
 
         '''
-        读取数据
+        读取数据, M2-粒细胞-0, M5-单细胞-1
         '''
-        object = ReadCSV('data/All.csv')
-        X, Y = object.readAll()
+        object = ReadCSV()
+        X, Y = object.readUseful()
+        exit()
         X, Y = self.preprocess(X, Y)
         self.MAX = np.max(X)
         
@@ -81,15 +82,6 @@ class GasDataset(Dataset):
             return input, target
 
     def preprocess(self, x, y):
-        # print('MAX: ', np.max(x))
-        # print('MEAN: ', np.mean(x))  # 95.04803863395959
-        # print(self.countBigDataNum(x, 5000))  # 61998
-        # print(self.countBigDataNum(x, 10000))  # 9567
-        # print(self.countBigDataNum(x, 15000))  # 1927
-        # print(self.countBigDataNum(x, 20000))  # 400
-        # print(self.countBigDataNum(x, 25000))  # 57
-        # print(self.countBigDataNum(x, 30000))  # 3
-
         # min-max scale
         # x = x / np.max(x)
 
@@ -130,10 +122,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     object = GasDataset(args)
-    input, target, _ = object.__getitem__(0)
-    print(input)
-    indices = np.random.choice(np.arange(len(input)), replace=False,
-                           size=int(len(input) * 0.2))
-    input[indices] = 0
-    print(input)
-    print(target)
+    # input, target, _ = object.__getitem__(0)
+    # print(input)
+    # indices = np.random.choice(np.arange(len(input)), replace=False,
+    #                        size=int(len(input) * 0.2))
+    # input[indices] = 0
+    # print(input)
+    # print(target)

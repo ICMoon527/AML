@@ -4,11 +4,12 @@ import numpy as np
 from xpinyin import Pinyin
 import os
 import shutil
+import logger
 
 dict = {}
 
 class ReadCSV():  # 2285 * 15
-    def __init__(self, filepath) -> None:
+    def __init__(self, filepath='Data/FinalSheet.csv') -> None:
         self.data = dt.fread(filepath).to_pandas()
         self.P = Pinyin()
         self.saved_folder = 'Data/PickedCSV'
@@ -80,6 +81,7 @@ class ReadCSV():  # 2285 * 15
                         M2_num += 1
                         if len(set(data.columns) & intersection) == 10:
                             if not os.path.exists(os.path.join(self.useful_data_folder, file)):
+                                # Data/UsefulData
                                 shutil.copy(os.path.join(root, file), os.path.join(self.useful_data_folder, file))
                             M2_10_num += 1
                     elif 'M5' in file:
@@ -98,10 +100,55 @@ class ReadCSV():  # 2285 * 15
                 print('Total file nums: {}, M2 num: {}/{}, M5 num: {}/{}'.format(len(files), M2_10_num, M2_num, M5_10_num, M5_num))
                     
             # print(self.all&all)
+    
+    def readUseful(self, length=10000):
+        length = int(length)
+        useful_protein = ['CD19+CD56 FITC-A', 'CD13 PE-A','CD117 PerCP-Cy5-5-A', 'CD33 PE-Cy7-A', 'CD34 APC-A', 'CD7 APC-R700-A',
+       'CD38 APC-Cy7-A', 'DR V450-A', 'CD45 V500-C-A', 'CD11B BV605-A']
+        X, Y = list(), list()
+        m2_logger = logger.setup_logger('M2_log', 'Doc/', 0, 'M2_log.txt')
+        m5_logger = logger.setup_logger('M5_log', 'Doc/', 0, 'M5_log.txt')
+        for root, dirs, files in os.walk(self.useful_data_folder):
+            for file in files:
+                data = dt.fread(os.path.join(root, file)).to_pandas()
+                numpy_data = pd.DataFrame(data, columns=useful_protein).to_numpy()
+
+                # if 'M2' in file:
+                #     m2_logger.info(data.describe())
+                # elif 'M5' in file:
+                #     m5_logger.info(data.describe())
+                # else:
+                #     print('ERROR')
+                #     exit()
+
+                # 归一化
+                numpy_data[numpy_data<0] = 0.
+                numpy_data[numpy_data>1023] = 1023.
+                numpy_data = numpy_data/1023.
+                # 舍去长度小于 length 的数据
+                if numpy_data.shape[0] < length:
+                    continue
+                else:
+                    for i in range(int(numpy_data.shape[0]/10000.)):
+                        slice = numpy_data[i*length:(i+1)*length, :]
+                        X.append(slice)
+                        if 'M2' in file:
+                            Y.append(0)
+                        elif 'M5' in file:
+                            Y.append(1)
+                        else:
+                            print('ERROR')
+                            exit()
+
+                
+
+        return np.array(X), np.array(Y)
 
 object = ReadCSV('Data/FinalSheet.csv')
 object.chooseNeed()
 # print(dict)
 
 if __name__ == '__main__':
-    object.findSameProteinAndSaveFile('Data/PickedCSV')
+    # object.findSameProteinAndSaveFile('Data/PickedCSV')
+    X, Y = object.readUseful()
+    print(X.shape, Y.shape)
