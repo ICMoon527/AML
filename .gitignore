@@ -1,5 +1,7 @@
 Data/
 Doc/
+*.csv
+*.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

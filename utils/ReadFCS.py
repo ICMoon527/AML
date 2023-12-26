@@ -49,6 +49,8 @@ class FCSReader():
             os.mkdir(save_path)
         for root, dirs, files in os.walk('Data/ExtractedFCS'):
             for file in files:
+                if not '.fcs' in file:
+                    continue
                 fcs_file = FCMeasurement(ID='read', datafile=os.path.join(root, file))
                 data = fcs_file.data
                 print('PROCEEDING ', file)
@@ -57,5 +59,5 @@ class FCSReader():
 
 if __name__ == '__main__':
     reader = FCSReader()
-    reader.checkAllAndSaveNeeded()
+    # reader.checkAllAndSaveNeeded()
     reader.fcs2csv()

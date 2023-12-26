@@ -10,7 +10,8 @@ dict = {}
 
 class ReadCSV():  # 2285 * 15
     def __init__(self, filepath='Data/FinalSheet.csv') -> None:
-        self.data = dt.fread(filepath).to_pandas()
+        if os.path.exists(filepath):
+            self.data = dt.fread(filepath).to_pandas()
         self.P = Pinyin()
         self.saved_folder = 'Data/PickedCSV'
         self.useful_data_folder = 'Data/UsefulData'
@@ -81,6 +82,7 @@ class ReadCSV():  # 2285 * 15
                         continue
                 print('All_protein: ', all_protein)  # 并集
                 intersection_protein = all_protein.copy()  # 拷贝值
+
                 for file in files:
                     file_protein = set()
                     data = dt.fread(os.path.join(root, file)).to_pandas()
@@ -93,19 +95,21 @@ class ReadCSV():  # 2285 * 15
                             continue
                     intersection_protein = intersection_protein & file_protein
                 print('Intersection_protein: ', intersection_protein)  # 交集
-
+                
+                for file in files:
                     # 另存为相同蛋白荧光的流式文件
-                    # if len(set(data.columns)&all) >= 10 and len(set(data.columns)&intersection) >= 8:
-                    #     print(len(set(data.columns)&all), len(set(data.columns)&intersection), file, 'SAVED')
-                    #     shutil.copy(os.path.join(root, file), os.path.join(self.saved_folder, file))
-                    # else:
-                    #     print(len(set(data.columns)&all), len(set(data.columns)&intersection), file, 'DISCARDED')
+                    if len(set(data.columns)&all) >= 10 and len(set(data.columns)&intersection) >= 8:
+                        print(len(set(data.columns)&all), len(set(data.columns)&intersection), file, 'SAVED')
+                        shutil.copy(os.path.join(root, file), os.path.join(self.saved_folder, file))
+                    else:
+                        print(len(set(data.columns)&all), len(set(data.columns)&intersection), file, 'DISCARDED')
         
         elif 'Picked' in path:
             M2_num, M5_num, M2_10_num, M5_10_num = 0, 0, 0, 0
             for root, dirs, files in os.walk(path):
                 for file in files:
                     data = dt.fread(os.path.join(root, file)).to_pandas()
+                    
                     if 'M2' in file:
                         M2_num += 1
                         if len(set(data.columns) & intersection) == 10:
@@ -119,6 +123,8 @@ class ReadCSV():  # 2285 * 15
                             if not os.path.exists(os.path.join(self.useful_data_folder, file)):
                                 shutil.copy(os.path.join(root, file), os.path.join(self.useful_data_folder, file))
                             M5_10_num += 1
+                    elif 'M4' in file:
+                        pass
                     else:
                         print('ERROR!!!')
                         exit()
@@ -174,10 +180,10 @@ class ReadCSV():  # 2285 * 15
         return np.array(X), np.array(Y)
 
 object = ReadCSV('Data/FinalSheet.csv')
-object.chooseNeed()
+# object.chooseNeed()
 # print(dict)
 
 if __name__ == '__main__':
     # object.findSameProteinAndSaveFile('Data/PickedCSV')
     X, Y = object.readUseful()
-    print(X.shape, Y.shape)
+    # print(X.shape, Y.shape)
