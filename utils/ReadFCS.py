@@ -20,10 +20,12 @@ class FCSReader():
                         if key in file_name:
                             if 'aml' in file_name:  # 只要AML的病人
                                 sick_name = dict[key]
-                                if 'M2' in sick_name:
+                                if ('M2' in sick_name) or ('m2' in sick_name):
                                     sick_name = 'M2_'
-                                elif 'M5' in sick_name:
+                                elif ('M5' in sick_name) or ('m5' in sick_name):
                                     sick_name = 'M5_'
+                                elif ('M4' in sick_name) or ('m4' in sick_name):
+                                    sick_name = 'M4_'
                                 else:
                                     print('Error sick_name')
                                     exit()
@@ -32,6 +34,7 @@ class FCSReader():
                                 if os.path.exists(self.save_folder+'/'+sick_name+file):
                                     print('Existed!.')
                                     continue
+                                # 把M2,M4,M5的病人文件另存为
                                 shutil.copy(path, self.save_folder+'/'+sick_name+file)
                                 print(path)
                         else:
@@ -54,5 +57,5 @@ class FCSReader():
 
 if __name__ == '__main__':
     reader = FCSReader()
-    # reader.checkAllAndSaveNeeded()
+    reader.checkAllAndSaveNeeded()
     reader.fcs2csv()

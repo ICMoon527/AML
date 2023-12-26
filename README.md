@@ -2,6 +2,7 @@
 
 ## 数据处理
 ### 数据获取
+    找M2,M4,M5的病人，
     拿到 ['CD19+CD56 FITC-A', 'CD13 PE-A','CD117 PerCP-Cy5-5-A', 'CD33 PE-Cy7-A', 'CD34 APC-A', 'CD7 APC-R700-A',
     'CD38 APC-Cy7-A', 'DR V450-A', 'CD45 V500-C-A', 'CD11B BV605-A'] 这些蛋白的数据，包含17个M2和20个M5病人，令M2为类别0，M5为类别1
 
