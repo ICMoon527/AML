@@ -20,19 +20,23 @@ class ReadCSV():  # 2285 * 15
         if not os.path.exists(self.useful_data_folder):
             os.mkdir(self.useful_data_folder)
 
-        self.all = {'CD34 APC-A', 'CD79a APC-A', 'PerCP-Cy5-5-A', 'HL-DR V450-A', 'MPO PE-A', 'BV605-A', 'PE-Cy7-A', 'CD235 PE-A', 
-                    'CD123 APC-Cy7-A', 'CD8 FITC-A', 'CD117 APC-Cy7-A', 'CD5 PerCP-Cy5-5-A', 'HLA-DR APC-A', 'CD79A APC-A', 'CD38 V450-A', 
-                    'CD117 APC-A', 'CD64 APC-Cy7-A', 'CD99 PE-A', 'cCD3 APC-Cy7-A', 'CD11B BV605-A', 'CD10 APC-R700-A', 'CD38 APC-Cy7-A', 
-                    'CD15 V450-A', 'CD19 FITC-A', 'CD64 FITC-A', 'cCD79a APC-A', 'CD56 FITC-A', 'CD19/CD56 FITC-A', 'CD71 FITC-A', 
-                    'CD15 FITC-A', 'CD3 APC-Cy7-A', 'CD33 PE-Cy7-A', 'CD34 PE-A', 'CD11b BV605-A', 'V450-A', 'CD3 APC-A', 'CD19+CD56 FITC-A', 
-                    'CD123 APC-R700-A', 'CD117 PerCP-Cy5-5-A', 'CD14 APC-Cy7-A', 'cCD3 APC-A', 'CD19/CD56/CD15 FITC-A', 'CD85D PE-Cy7-A', 
-                    'CD20 APC-Cy7-A', 'CD15 BV605-A', '11b BV605-A', 'CD9 FITC-A', 'APC-R700-A', 'CD13 PE-A', 'APC-Cy7-A', 'MPO FITC-A', 
-                    'CD16 V450-A', 'CD56 APC-R700-A', 'CD22 PE-A', 'CD321 FITC-A', 'CD13 PerCP-Cy5-5-A', 'CD2 APC-A', 'HLA-DR V450-A', 
-                    'CD64 PE-A', 'DR V450-A', 'CD45 V500-C-A', 'CD71 APC-A', 'CD7 APC-R700-A', 'CD11B V450-A', 'cCD79A PE-A', 'CD8 APC-R700-A', 
-                    'CD36 FITC-A', 'CD14 APC-A', 'CD16 APC-Cy7-A', 'CD56/CD19 FITC-A', 'CD4 V450-A'}
+        self.all = {'FSC-W', 'CD15 BV605-A', 'CD64 PE-A', 'FSC-A', 'DR V450-A', 'CD123 APC-R700-A', 'MPO PE-A', 'CD11B V450-A', 'SSC-W', 'CD45 V500-C-A', 
+                    'CD71 FITC-A', 'HLA-DR APC-A', 'cCD3 APC-Cy7-A', 'CD56 FITC-A', 'CD123 APC-Cy7-A', 'CD19/CD56/CD15 FITC-A', 'FSC-H', 'CD19/CD56 FITC-A', 
+                    'CD34 PE-A', 'HLA-DR V450-A', 'HL-DR V450-A', 'CD2 APC-A', 'CD36 FITC-A', 'PE-A', 'CD19 FITC-A', 'MPO FITC-A', 'BV605-A', 'FITC-A', 
+                    'CD235 PE-A', 'CD5 PerCP-Cy5-5-A', 'CD117 PerCP-Cy5-5-A', 'CD14 APC-A', 'Time', 'CD14 APC-Cy7-A', 'cCD79A PE-A', 'cCD3 APC-A', 
+                    'CD16 APC-Cy7-A', 'CD22 PE-A', 'CD38 APC-Cy7-A', 'APC-R700-A', 'CD64 APC-Cy7-A', 'CD71 APC-A', 'CD7 APC-R700-A', 'CD15 V450-A', 
+                    'PerCP-Cy5-5-A', 'cCD79a APC-A', 'CD56/CD19 FITC-A', 'CD9 FITC-A', 'APC-Cy7-A', 'CD15 FITC-A', 'CD64 FITC-A', 'CD10 APC-R700-A', 'SSC-A', 
+                    'PE-Cy7-A', 'CD34 APC-A', 'CD79A APC-A', 'CD3 APC-A', 'CD4 V450-A', 'CD3 APC-Cy7-A', 'V450-A', '11b BV605-A', 'CD20 APC-Cy7-A', 'CD19+CD56 FITC-A', 
+                    'CD33 PE-Cy7-A', 'SSC-H', 'CD13 PE-A', 'CD8 FITC-A', 'CD11B BV605-A', 'CD79a APC-A', 'CD117 APC-A', 'CD13 PerCP-Cy5-5-A', 'CD56 APC-R700-A', 
+                    'CD8 APC-R700-A', 'CD11b BV605-A', 'CD16 V450-A'}
         
-        self.intersection = {'CD7 APC-R700-A', 'CD11B BV605-A', 'CD19+CD56 FITC-A', 'CD117 PerCP-Cy5-5-A', 'DR V450-A', 'CD45 V500-C-A', 
-                             'CD34 APC-A', 'CD38 APC-Cy7-A', 'CD13 PE-A', 'CD33 PE-Cy7-A'}
+        self.intersection = set()
+        
+        self.all_protein = {'CD16', 'CD33', 'CD19', 'CD56', 'CD2', 'CD123', 'CD15', 'CD14', 'CD22', 'CD11b', 'CD45', 'CD19+CD56', 'CD64', 'cCD3', 'cCD79a',
+                            '11b', 'CD4', 'CD10', 'HL-DR', 'CD36', 'CD71', 'FSC-A', 'CD13', 'CD79A', 'CD19/CD56/CD15', 'FSC-W', 'DR', 'CD11B', 'HLA-DR', 'CD5',
+                            'CD7', 'cCD79A', 'FSC-H', 'CD79a', 'CD235', 'SSC-W', 'MPO', 'CD8', 'CD34', 'CD56/CD19', 'CD3', 'CD20', 'CD19/CD56', 'CD117', 'CD38', 'CD9'}
+        
+        self.intersection_protein, self.intersection_protein_1, self.intersection_protein_2, self.intersection_protein_3, self.intersection_protein_4, self.intersection_protein_5 = set(), set(), set(), set(), set(), set()
 
     def chooseNeed(self):  # pick M2 M4 and M5 up in the final sheet.
         nrows, ncols = self.data.shape
@@ -46,63 +50,58 @@ class ReadCSV():  # 2285 * 15
         self.countNum()
     
     def countNum(self):
-        M2_count, M5_count = 0, 0
+        M2_count, M4_count, M5_count = 0, 0, 0
         for key in dict.keys():
             if 'M2' in dict[key]:
                 M2_count += 1
             elif 'M5' in dict[key]:
                 M5_count += 1
-        print(M2_count, M5_count)
+            elif 'M4' in dict[key]:
+                M4_count += 1
+        print('M2_count: {}, M4_count: {}, M5_count: {}'.format(M2_count, M4_count, M5_count))
 
     def findSameProteinAndSaveFile(self, path):
-        intersection = {'CD7 APC-R700-A', 'CD11B BV605-A', 'CD19+CD56 FITC-A', 'CD117 PerCP-Cy5-5-A', 'DR V450-A', 'CD45 V500-C-A', 
-                        'CD34 APC-A', 'CD38 APC-Cy7-A', 'CD13 PE-A', 'CD33 PE-Cy7-A'}
-        all = {'CD34 APC-A', 'CD79a APC-A', 'PerCP-Cy5-5-A', 'HL-DR V450-A', 'MPO PE-A', 'BV605-A', 'PE-Cy7-A', 'CD235 PE-A', 'CD123 APC-Cy7-A', 
-               'CD8 FITC-A', 'CD117 APC-Cy7-A', 'CD5 PerCP-Cy5-5-A', 'HLA-DR APC-A', 'CD79A APC-A', 'CD38 V450-A', 'CD117 APC-A', 'CD64 APC-Cy7-A', 
-               'CD99 PE-A', 'cCD3 APC-Cy7-A', 'CD11B BV605-A', 'CD10 APC-R700-A', 'CD38 APC-Cy7-A', 'CD15 V450-A', 'CD19 FITC-A', 'CD64 FITC-A', 
-               'cCD79a APC-A', 'CD56 FITC-A', 'CD19/CD56 FITC-A', 'CD71 FITC-A', 'CD15 FITC-A', 'CD3 APC-Cy7-A', 'CD33 PE-Cy7-A', 'CD34 PE-A', 
-               'CD11b BV605-A', 'V450-A', 'CD3 APC-A', 'CD19+CD56 FITC-A', 'CD123 APC-R700-A', 'CD117 PerCP-Cy5-5-A', 'CD14 APC-Cy7-A', 'cCD3 APC-A', 
-               'CD19/CD56/CD15 FITC-A', 'CD85D PE-Cy7-A', 'CD20 APC-Cy7-A', 'CD15 BV605-A', '11b BV605-A', 'CD9 FITC-A', 'APC-R700-A', 'CD13 PE-A', 
-               'APC-Cy7-A', 'MPO FITC-A', 'CD16 V450-A', 'CD56 APC-R700-A', 'CD22 PE-A', 'CD321 FITC-A', 'CD13 PerCP-Cy5-5-A', 'CD2 APC-A', 
-               'HLA-DR V450-A', 'CD64 PE-A', 'DR V450-A', 'CD45 V500-C-A', 'CD71 APC-A', 'CD7 APC-R700-A', 'CD11B V450-A', 'cCD79A PE-A', 
-               'CD8 APC-R700-A', 'CD36 FITC-A', 'CD14 APC-A', 'CD16 APC-Cy7-A', 'CD56/CD19 FITC-A', 'CD4 V450-A'}
-        all_protein = set()
-        
         if 'Extracted' in path:
             for root, dirs, files in os.walk(path):
                 for file in files:
-                    data = dt.fread(os.path.join(root, file)).to_pandas()
-                    all = all | set(data.columns)
-                for item in all:
+                    if ('M2' in file) or ('M5' in file):
+                        data = dt.fread(os.path.join(root, file)).to_pandas()
+                        self.all = self.all | set(data.columns)
+
+                for item in self.all:
                     if ' ' in item:
                         protein_name = item.split(' ')[0]
-                        all_protein.add(protein_name)  # 加入集合
+                        self.all_protein.add(protein_name)  # 加入集合
+                    elif ('FSC' in item) or ('SSC-W' in item):
+                        self.all_protein.add(item)  # 加入集合
                     else:
-                        # 没有空格说明这个通道没有放蛋白标记
+                        # 没有空格说明这个通道没有放蛋白标记，且排除了物理参数
                         continue
-                print('All_protein: ', all_protein)  # 并集
-                intersection_protein = all_protein.copy()  # 拷贝值
+                print('All_protein: ', self.all_protein)  # 并集
+                self.intersection_protein = self.all_protein.copy()  # 拷贝值
 
                 for file in files:
-                    file_protein = set()
-                    data = dt.fread(os.path.join(root, file)).to_pandas()
-                    for item in set(data.columns):
-                        if ' ' in item:
-                            protein_name = item.split(' ')[0]
-                            file_protein.add(protein_name)  # 加入集合
-                        else:
-                            # 没有空格说明这个通道没有放蛋白标记
-                            continue
-                    intersection_protein = intersection_protein & file_protein
-                print('Intersection_protein: ', intersection_protein)  # 交集
+                    if ('M2' in file) or ('M5' in file):
+                        file_protein = set()
+                        data = dt.fread(os.path.join(root, file)).to_pandas()
+                        for item in set(data.columns):
+                            if ' ' in item:
+                                protein_name = item.split(' ')[0]
+                                file_protein.add(protein_name)  # 加入集合
+                            else:
+                                # 没有空格说明这个通道没有放蛋白标记
+                                continue
+                        self.intersection_protein = self.intersection_protein & file_protein
+                        print('{} 里面的交集蛋白是 {}'.format(file, self.all_protein&file_protein))
+                print('Intersection_protein: ', self.intersection_protein)  # 交集
                 
-                for file in files:
-                    # 另存为相同蛋白荧光的流式文件
-                    if len(set(data.columns)&all) >= 10 and len(set(data.columns)&intersection) >= 8:
-                        print(len(set(data.columns)&all), len(set(data.columns)&intersection), file, 'SAVED')
-                        shutil.copy(os.path.join(root, file), os.path.join(self.saved_folder, file))
-                    else:
-                        print(len(set(data.columns)&all), len(set(data.columns)&intersection), file, 'DISCARDED')
+                # for file in files:
+                #     # 另存为相同蛋白荧光的流式文件
+                #     if len(set(data.columns)&all) >= 10 and len(set(data.columns)&intersection) >= 8:
+                #         print(len(set(data.columns)&all), len(set(data.columns)&intersection), file, 'SAVED')
+                #         shutil.copy(os.path.join(root, file), os.path.join(self.saved_folder, file))
+                #     else:
+                #         print(len(set(data.columns)&all), len(set(data.columns)&intersection), file, 'DISCARDED')
         
         elif 'Picked' in path:
             M2_num, M5_num, M2_10_num, M5_10_num = 0, 0, 0, 0
@@ -180,10 +179,11 @@ class ReadCSV():  # 2285 * 15
         return np.array(X), np.array(Y)
 
 object = ReadCSV('Data/FinalSheet.csv')
-# object.chooseNeed()
-# print(dict)
+object.chooseNeed()
+print('病人类别字典: ', dict)
 
 if __name__ == '__main__':
+    object.findSameProteinAndSaveFile('Data/ExtractedCSV')
     # object.findSameProteinAndSaveFile('Data/PickedCSV')
-    X, Y = object.readUseful()
+    # X, Y = object.readUseful()
     # print(X.shape, Y.shape)
