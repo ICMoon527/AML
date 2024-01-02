@@ -59,5 +59,5 @@ class FCSReader():
 
 if __name__ == '__main__':
     reader = FCSReader()
-    # reader.checkAllAndSaveNeeded()
+    reader.checkAllAndSaveNeeded()
     reader.fcs2csv()
