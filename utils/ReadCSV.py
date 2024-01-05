@@ -33,6 +33,8 @@ class ReadCSV():  # 2285 * 15
                     'CD33 PE-Cy7-A', 'SSC-H', 'CD13 PE-A', 'CD8 FITC-A', 'CD11B BV605-A', 'CD79a APC-A', 'CD117 APC-A', 'CD13 PerCP-Cy5-5-A', 'CD56 APC-R700-A', 
                     'CD8 APC-R700-A', 'CD11b BV605-A', 'CD16 V450-A'}
         
+        self.intersection = set()
+        
         self.all_protein = {'CD16', 'CD33', 'CD19', 'CD56', 'CD2', 'CD123', 'CD15', 'CD14', 'CD22', 'CD11b', 'CD45', 'CD19+CD56', 'CD64', 'cCD3', 'cCD79a',
                             '11b', 'CD4', 'CD10', 'HL-DR', 'CD36', 'CD71', 'FSC-A', 'CD13', 'CD79A', 'CD19/CD56/CD15', 'FSC-W', 'DR', 'CD11B', 'HLA-DR', 'CD5',
                             'CD7', 'cCD79A', 'FSC-H', 'CD79a', 'CD235', 'SSC-W', 'MPO', 'CD8', 'CD34', 'CD56/CD19', 'CD3', 'CD20', 'CD19/CD56', 'CD117', 'CD38', 'CD9'}
