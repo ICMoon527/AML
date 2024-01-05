@@ -5,8 +5,11 @@ from xpinyin import Pinyin
 import os
 import shutil
 import logger
+import json
 
 dict = {}
+m2_logger = logger.setup_logger('M2_log', 'Doc/', 0, 'M2_log.txt')
+m5_logger = logger.setup_logger('M5_log', 'Doc/', 0, 'M5_log.txt')
 
 class ReadCSV():  # 2285 * 15
     def __init__(self, filepath='Data/FinalSheet.csv') -> None:
@@ -30,13 +33,26 @@ class ReadCSV():  # 2285 * 15
                     'CD33 PE-Cy7-A', 'SSC-H', 'CD13 PE-A', 'CD8 FITC-A', 'CD11B BV605-A', 'CD79a APC-A', 'CD117 APC-A', 'CD13 PerCP-Cy5-5-A', 'CD56 APC-R700-A', 
                     'CD8 APC-R700-A', 'CD11b BV605-A', 'CD16 V450-A'}
         
-        self.intersection = set()
-        
         self.all_protein = {'CD16', 'CD33', 'CD19', 'CD56', 'CD2', 'CD123', 'CD15', 'CD14', 'CD22', 'CD11b', 'CD45', 'CD19+CD56', 'CD64', 'cCD3', 'cCD79a',
                             '11b', 'CD4', 'CD10', 'HL-DR', 'CD36', 'CD71', 'FSC-A', 'CD13', 'CD79A', 'CD19/CD56/CD15', 'FSC-W', 'DR', 'CD11B', 'HLA-DR', 'CD5',
                             'CD7', 'cCD79A', 'FSC-H', 'CD79a', 'CD235', 'SSC-W', 'MPO', 'CD8', 'CD34', 'CD56/CD19', 'CD3', 'CD20', 'CD19/CD56', 'CD117', 'CD38', 'CD9'}
         
-        self.intersection_protein, self.intersection_protein_1, self.intersection_protein_2, self.intersection_protein_3, self.intersection_protein_4, self.intersection_protein_5 = set(), set(), set(), set(), set(), set()
+        self.intersection = set()
+        
+        self.intersection_protein, self.intersection_protein_1, self.intersection_protein_2, self.intersection_protein_3, self.intersection_protein_4, self.intersection_protein_5 = \
+        self.all_protein.copy(), self.all_protein.copy(), self.all_protein.copy(), self.all_protein.copy(), self.all_protein.copy(), self.all_protein.copy()
+
+        self.merge_protein, self.merge_protein_1, self.merge_protein_2, self.merge_protein_3, self.merge_protein_4, self.merge_protein_5 = (
+        set(), 
+        {'CD45', 'CD19/CD56', 'CD19', 'CD34', 'CD33', 'CD56/CD19', 'CD16', 'CD15', 'CD19+CD56', 'CD9', 'CD38', 'CD14', 'CD13', 'DR', 'CD7', 'CD56', 'CD19/CD56/CD15', 'CD11B', 'CD123', 'HL-DR', 'HLA-DR', 'CD64', 'CD117'}, 
+        {'CD45', 'CD34', 'CD33', 'CD56/CD19', 'CD15', 'CD16', 'CD19+CD56', 'CD9', 'CD38', 'CD14', 'CD36', 'CD13', 'DR', 'CD7', 'CD56', '11b', 'CD19/CD56/CD15', 'CD11B', 'CD123', 'HL-DR', 'HLA-DR', 'CD10', 'CD64', 'CD117'}, 
+        {'CD45', 'CD19/CD56', 'CD34', 'CD33', 'CD56/CD19', 'CD22', 'CD15', 'CD19+CD56', 'CD4', 'CD5', 'CD38', 'CD13', 'CD8', 'DR', 'CD7', 'CD56', 'CD3', 'CD19/CD56/CD15', 'CD11B', 'CD20', 'HLA-DR', 'CD117'}, 
+        {'HLA-DR', 'CD45', 'CD34', 'CD33', 'CD15', 'CD56/CD19', 'CD19+CD56', 'CD9', 'CD38', 'CD13', 'CD71', 'DR', 'CD7', 'CD11B', 'CD123', 'CD235', 'CD2', 'CD117'}, 
+        {'CD45', 'CD34', 'CD33', 'CD15', 'CD56/CD19', 'CD19+CD56', 'cCD79A', 'CD38', 'CD79A', 'CD13', 'cCD79a', 'cCD3', 'DR', 'CD7', 'CD3', 'CD19/CD56/CD15', 'CD11B', 'MPO', 'HLA-DR', 'CD79a', 'CD117'}
+        )
+
+        self.file_count_1, self.file_count_2, self.file_count_3, self.file_count_4, self.file_count_5 = 0,0,0,0,0
+        self.M2_file_count_1, self.M2_file_count_2, self.M2_file_count_3, self.M2_file_count_4, self.M2_file_count_5 = 0,0,0,0,0
 
     def chooseNeed(self):  # pick M2 M4 and M5 up in the final sheet.
         nrows, ncols = self.data.shape
@@ -91,9 +107,53 @@ class ReadCSV():  # 2285 * 15
                             else:
                                 # 没有空格说明这个通道没有放蛋白标记
                                 continue
+
+                        if '001' in file:
+                            self.file_count_1 += 1
+                            if 'M2' in file:
+                                self.M2_file_count_1 += 1
+
+                            self.merge_protein_1 = self.merge_protein_1 | file_protein
+                            self.intersection_protein_1 = self.intersection_protein_1 & file_protein
+                            m2_logger.info('File: {} (type 001), has {} public proteins according to all the 001 files.\nThey are {}\n'.format(file, len(self.merge_protein_1 & file_protein), self.merge_protein_1 & file_protein))
+                        elif '002' in file:
+                            self.file_count_2 += 1
+                            if 'M2' in file:
+                                self.M2_file_count_2 += 1
+
+                            self.merge_protein_2 = self.merge_protein_2 | file_protein
+                            self.intersection_protein_2 = self.intersection_protein_2 & file_protein
+                        elif '003' in file:
+                            self.file_count_3 += 1
+                            if 'M2' in file:
+                                self.M2_file_count_3 += 1
+
+                            self.merge_protein_3 = self.merge_protein_3 | file_protein
+                            self.intersection_protein_3 = self.intersection_protein_3 & file_protein
+                        elif '004' in file:
+                            self.file_count_4 += 1
+                            if 'M2' in file:
+                                self.M2_file_count_4 += 1
+
+                            self.merge_protein_4 = self.merge_protein_4 | file_protein
+                            self.intersection_protein_4 = self.intersection_protein_4 & file_protein
+                        elif '005' in file:
+                            self.file_count_5 += 1
+                            if 'M2' in file:
+                                self.M2_file_count_5 += 1
+
+                            self.merge_protein_5 = self.merge_protein_5 | file_protein
+                            self.intersection_protein_5 = self.intersection_protein_5 & file_protein
+                        
                         self.intersection_protein = self.intersection_protein & file_protein
-                        print('{} 里面的交集蛋白是 {}'.format(file, self.all_protein&file_protein))
+                        # print('{} 里面的交集蛋白是 {}'.format(file, self.all_protein & file_protein))
+                
                 print('Intersection_protein: ', self.intersection_protein)  # 交集
+                print('文件001数量: {}({}/{}), 交并: {}, {}'.format(self.file_count_1, self.M2_file_count_1, self.file_count_1-self.M2_file_count_1, self.intersection_protein_1, self.merge_protein_1))
+                print('文件002数量: {}({}/{}), 交并: {}, {}'.format(self.file_count_2, self.M2_file_count_2, self.file_count_2-self.M2_file_count_2, self.intersection_protein_2, self.merge_protein_2))
+                print('文件003数量: {}({}/{}), 交并: {}, {}'.format(self.file_count_3, self.M2_file_count_3, self.file_count_3-self.M2_file_count_3, self.intersection_protein_3, self.merge_protein_3))
+                print('文件004数量: {}({}/{}), 交并: {}, {}'.format(self.file_count_4, self.M2_file_count_4, self.file_count_4-self.M2_file_count_4, self.intersection_protein_4, self.merge_protein_4))
+                print('文件005数量: {}({}/{}), 交并: {}, {}'.format(self.file_count_5, self.M2_file_count_5, self.file_count_5-self.M2_file_count_5, self.intersection_protein_5, self.merge_protein_5))
                 
                 # for file in files:
                 #     # 另存为相同蛋白荧光的流式文件
@@ -111,14 +171,14 @@ class ReadCSV():  # 2285 * 15
                     
                     if 'M2' in file:
                         M2_num += 1
-                        if len(set(data.columns) & intersection) == 10:
+                        if len(set(data.columns) & self.intersection) == 10:
                             if not os.path.exists(os.path.join(self.useful_data_folder, file)):
                                 # Data/UsefulData
                                 shutil.copy(os.path.join(root, file), os.path.join(self.useful_data_folder, file))
                             M2_10_num += 1
                     elif 'M5' in file:
                         M5_num += 1
-                        if len(set(data.columns) & intersection) == 10:
+                        if len(set(data.columns) & self.intersection) == 10:
                             if not os.path.exists(os.path.join(self.useful_data_folder, file)):
                                 shutil.copy(os.path.join(root, file), os.path.join(self.useful_data_folder, file))
                             M5_10_num += 1
@@ -129,7 +189,7 @@ class ReadCSV():  # 2285 * 15
                         exit()
                     
                     # {'DR V450-A', 'CD19+CD56 FITC-A'} 通常都是少这俩
-                    print(len(set(data.columns) & all), len(set(data.columns) & intersection), intersection-set(data.columns), file)
+                    print(len(set(data.columns) & all), len(set(data.columns) & self.intersection), self.intersection-set(data.columns), file)
                 # Total file nums: 88, M2 num: 17/36, M5 num: 20/52
                 print('Total file nums: {}, M2 num: {}/{}, M5 num: {}/{}'.format(len(files), M2_10_num, M2_num, M5_10_num, M5_num))
                     
@@ -140,8 +200,7 @@ class ReadCSV():  # 2285 * 15
         useful_protein = ['CD19+CD56 FITC-A', 'CD13 PE-A','CD117 PerCP-Cy5-5-A', 'CD33 PE-Cy7-A', 'CD34 APC-A', 'CD7 APC-R700-A',
        'CD38 APC-Cy7-A', 'DR V450-A', 'CD45 V500-C-A', 'CD11B BV605-A']
         X, Y = list(), list()
-        m2_logger = logger.setup_logger('M2_log', 'Doc/', 0, 'M2_log.txt')
-        m5_logger = logger.setup_logger('M5_log', 'Doc/', 0, 'M5_log.txt')
+        
         for root, dirs, files in os.walk(self.useful_data_folder):
             for file in files:
                 data = dt.fread(os.path.join(root, file)).to_pandas()

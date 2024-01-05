@@ -1,0 +1,141 @@
+M2_log INFO: File: M5_20220927-2_AML-M5  CHEN HE FANG_001.csv (type 001), has 9 public proteins according to all the 001 files.
+They are {'CD13', 'CD34', 'CD45', 'CD16', 'CD14', 'CD56', 'CD33', 'CD64', 'CD117'}
+
+M2_log INFO: File: M2_20220916_AML DAI MI FA_001.csv (type 001), has 9 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'HLA-DR', 'CD56/CD19', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M2_20211217_AML-WU CAI E_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD19+CD56', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20220701_AML LIU YI DE_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'CD11B', 'HLA-DR', 'CD56/CD19', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20220825_AML-JIN LIN-CSF_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'CD11B', 'HLA-DR', 'CD56/CD19', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M2_20210827_AML-WU CAI E-1_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD19/CD56', 'CD117'}
+
+M2_log INFO: File: M2_20211026mrd_AML-WANG FU BIAO_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD19+CD56', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20220523_AML-YING JU LIAN-A001_017.csv (type 001), has 9 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'HLA-DR', 'CD33', 'CD19', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20220413_AML-JIN LIN-CSF_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD19+CD56', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20210831_AML-LIU YI DE_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD19/CD56', 'CD117'}
+
+M2_log INFO: File: M5_20210413_AML5-DAI CHUN LING-001_009.csv (type 001), has 9 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'HLA-DR', 'CD33', 'CD19', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20220301_AML-JIN LIN-A1_001.csv (type 001), has 9 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'HLA-DR', 'CD33', 'CD19', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20220801-2_AML YAN JIN SHENG-001_006.csv (type 001), has 9 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'HLA-DR', 'CD33', 'CD19', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20211108_AML CHEN LI YA_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD19+CD56', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M2_20220121_AML HE DE XIN-1_001.csv (type 001), has 9 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'HLA-DR', 'CD33', 'CD19', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20220406_AML JIN LIN_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD19+CD56', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20221109_AML JINLIN_001.csv (type 001), has 9 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'HLA-DR', 'CD56/CD19', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20220930_AML JIN LIN_001.csv (type 001), has 9 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'HLA-DR', 'CD56/CD19', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20220113_AML-DAI CHUN LING_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD19+CD56', 'CD45', 'DR', 'CD11B', 'CD33', 'CD64', 'CD117'}
+
+M2_log INFO: File: M5_20220107_AML-LI SU GENG_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD19+CD56', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20220208_AML LIU YI DE_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD19+CD56', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20220318_AML-JIN LIN_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD19+CD56', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M2_20221124_AML XU FU CHUN_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD15', 'CD45', 'HLA-DR', 'CD56/CD19', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M2_20230206_AML-ZHAI CHENG ZHAO_001_006.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD15', 'CD45', 'HLA-DR', 'CD56/CD19', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_2022323_AML LIU YI DE_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD19+CD56', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M2_20220307_AML WU CAI E_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD19+CD56', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M2_20211029_AML WU CAI E_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD19+CD56', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M2_20220922_AML HE DE XIN_001.csv (type 001), has 9 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'HLA-DR', 'CD56/CD19', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M2_20220422_AML XU FU CHUN_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD19+CD56', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20211220_AML-LIU YI DE_001.csv (type 001), has 8 public proteins according to all the 001 files.
+They are {'CD123', 'CD13', 'CD34', 'CD45', 'HLA-DR', 'CD33', 'CD9', 'CD117'}
+
+M2_log INFO: File: M5_20220426-2_2-AML-CHEN HE FANG-A001_006.csv (type 001), has 9 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'HLA-DR', 'CD33', 'CD19', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20210909_AML-DAI CHUN LING_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD19+CD56', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M2_20220223_AML-DAI MI FA_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD19+CD56', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M2_20220706-MRD_AML WANG FU BIAO_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'DR', 'CD11B', 'CD56/CD19', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20210511_AML-DAI CHUN LING_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD19/CD56/CD15', 'CD117'}
+
+M2_log INFO: File: M5_20210503_AML NI SHENG YE_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD19/CD56/CD15', 'CD117'}
+
+M2_log INFO: File: M5_20220328_AML-GUAN GEN FA_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD19+CD56', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20220712_AML LI SU GENG_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'CD11B', 'HLA-DR', 'CD56/CD19', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20220519_AML BAO LING LI_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'CD11B', 'HLA-DR', 'CD56/CD19', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20220727_AML GUAN GEN FA_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'CD11B', 'HLA-DR', 'CD56/CD19', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M2_20220801-2_AML LIN MING CHUN-1_001.csv (type 001), has 9 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'HLA-DR', 'CD33', 'CD19', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20210917_AML-LIU YI DE_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD19+CD56', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M2_20210614_AML-WU CAI E-001_160.csv (type 001), has 9 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'HLA-DR', 'CD33', 'CD19', 'CD38', 'CD117'}
+
+M2_log INFO: File: M5_20210805_AML NI SHENG YE_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'DR', 'CD11B', 'CD33', 'CD38', 'CD19/CD56/CD15', 'CD117'}
+
+M2_log INFO: File: M5_20230206_AML-M5 LI SU GENG_001.csv (type 001), has 9 public proteins according to all the 001 files.
+They are {'CD13', 'CD34', 'CD45', 'HL-DR', 'CD14', 'CD56', 'CD33', 'CD64', 'CD117'}
+
+M2_log INFO: File: M2_20220506_AML WU CAI E_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'CD11B', 'HLA-DR', 'CD56/CD19', 'CD33', 'CD38', 'CD117'}
+
+M2_log INFO: File: M2_20220715_AML ZHU XIN KANG_001.csv (type 001), has 10 public proteins according to all the 001 files.
+They are {'CD13', 'CD7', 'CD34', 'CD45', 'CD11B', 'HLA-DR', 'CD56/CD19', 'CD33', 'CD38', 'CD117'}
+
