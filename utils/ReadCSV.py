@@ -33,11 +33,14 @@ class ReadCSV():  # 2285 * 15
                     'CD33 PE-Cy7-A', 'SSC-H', 'CD13 PE-A', 'CD8 FITC-A', 'CD11B BV605-A', 'CD79a APC-A', 'CD117 APC-A', 'CD13 PerCP-Cy5-5-A', 'CD56 APC-R700-A', 
                     'CD8 APC-R700-A', 'CD11b BV605-A', 'CD16 V450-A'}
         
+        self.all_physics = set()
+        
         self.intersection = set()
         
-        self.all_protein = {'CD16', 'CD33', 'CD19', 'CD56', 'CD2', 'CD123', 'CD15', 'CD14', 'CD22', 'CD11b', 'CD45', 'CD19+CD56', 'CD64', 'cCD3', 'cCD79a',
-                            '11b', 'CD4', 'CD10', 'HL-DR', 'CD36', 'CD71', 'FSC-A', 'CD13', 'CD79A', 'CD19/CD56/CD15', 'FSC-W', 'DR', 'CD11B', 'HLA-DR', 'CD5',
-                            'CD7', 'cCD79A', 'FSC-H', 'CD79a', 'CD235', 'SSC-W', 'MPO', 'CD8', 'CD34', 'CD56/CD19', 'CD3', 'CD20', 'CD19/CD56', 'CD117', 'CD38', 'CD9'}
+        self.all_protein = {'CD20', 'FSC-A', 'CD15', 'CD2', 'HL-DR', 'CD22', 'FSC-H', 'CD235', 'CD11b', 'CD19/CD56/CD15', 'CD3', 'CD123', 'CD7', 'HLA-DR', 
+                            '11b', 'DR', 'CD38', 'CD13', 'MPO', 'cCD79A', 'CD10', 'CD56', 'cCD3', 'CD36', 'CD8', 'CD19/CD56', 'CD79A', 'FSC-W', 'CD11B', 
+                            'CD19+CD56', 'SSC-W', 'CD56/CD19', 'SSC-H', 'CD45', 'CD117', 'CD9', 'CD19', 'CD4', 'cCD79a', 'CD16', 'CD33', 'SSC-A', 'CD79a', 
+                            'CD14', 'CD64', 'CD71', 'CD34', 'CD5'}
         
         self.intersection = set()
         
@@ -53,6 +56,8 @@ class ReadCSV():  # 2285 * 15
         {'CD45', 'CD34', 'CD33', 'CD15', 'CD56/CD19', 'CD19+CD56', 'cCD79A', 'CD38', 'CD79A', 'CD13', 'cCD79a', 'cCD3', 'DR', 'CD7', 'CD3', 'CD19/CD56/CD15', 'CD11B', 'MPO', 'HLA-DR', 'CD79a', 'CD117'}
         )
 
+        self.useful_items = {'FSC-A', 'FSC-H', 'SSC-A', 'CD45', 'CD19', 'CD34', 'CD33', 'CD38', 'CD13', 'DR', 'CD7', 'CD56', 'CD11B', 'HLA-DR', 'CD117'}
+        
         self.file_count_1, self.file_count_2, self.file_count_3, self.file_count_4, self.file_count_5 = 0,0,0,0,0
         self.M2_file_count_1, self.M2_file_count_2, self.M2_file_count_3, self.M2_file_count_4, self.M2_file_count_5 = 0,0,0,0,0
 
@@ -90,7 +95,7 @@ class ReadCSV():  # 2285 * 15
                     if ' ' in item:
                         protein_name = item.split(' ')[0]
                         self.all_protein.add(protein_name)  # 加入集合
-                    elif ('FSC' in item) or ('SSC-W' in item):
+                    elif ('FSC' in item) or ('SSC' in item):
                         self.all_protein.add(item)  # 加入集合
                     else:
                         # 没有空格说明这个通道没有放蛋白标记，且排除了物理参数
@@ -106,10 +111,13 @@ class ReadCSV():  # 2285 * 15
                             if ' ' in item:
                                 protein_name = item.split(' ')[0]
                                 file_protein.add(protein_name)  # 加入集合
+                            elif ('FSC' in item) or ('SSC' in item):
+                                file_protein.add(item)
                             else:
                                 # 没有空格说明这个通道没有放蛋白标记
                                 continue
-
+                        
+                        # 先重点关注第一管数据
                         if '001' in file:
                             self.file_count_1 += 1
                             if 'M2' in file:
