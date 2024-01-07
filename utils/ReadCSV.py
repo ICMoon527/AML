@@ -7,7 +7,7 @@ import shutil
 import logger
 import json
 
-dict = {}
+dic = {}
 m2_logger = logger.setup_logger('M2_log', 'Doc/', 0, 'M2_log.txt')
 m5_logger = logger.setup_logger('M5_log', 'Doc/', 0, 'M5_log.txt')
 
@@ -56,7 +56,7 @@ class ReadCSV():  # 2285 * 15
         {'CD45', 'CD34', 'CD33', 'CD15', 'CD56/CD19', 'CD19+CD56', 'cCD79A', 'CD38', 'CD79A', 'CD13', 'cCD79a', 'cCD3', 'DR', 'CD7', 'CD3', 'CD19/CD56/CD15', 'CD11B', 'MPO', 'HLA-DR', 'CD79a', 'CD117'}
         )
 
-        self.useful_items = {'FSC-A', 'FSC-H', 'SSC-A', 'CD45', 'CD19', 'CD34', 'CD33', 'CD38', 'CD13', 'DR', 'CD7', 'CD56', 'CD11B', 'HLA-DR', 'CD117'}
+        self.useful_items = {'FSC-A', 'FSC-H', 'SSC-A', 'CD45', 'CD19', 'CD34', 'CD33', 'CD38', 'CD13', 'DR', 'CD7', 'CD56', 'CD11B', 'HLA-DR', 'CD117', 'HL-DR'}
         
         self.file_count_1, self.file_count_2, self.file_count_3, self.file_count_4, self.file_count_5 = 0,0,0,0,0
         self.M2_file_count_1, self.M2_file_count_2, self.M2_file_count_3, self.M2_file_count_4, self.M2_file_count_5 = 0,0,0,0,0
@@ -69,17 +69,17 @@ class ReadCSV():  # 2285 * 15
             if ('M2' in statement) or ('m2' in statement) or ('M5' in statement) or ('m5' in statement) or ('M4' in statement) or ('m4' in statement):
                 if ('腰痛' not in statement) and ('M4/M5' not in statement):  # 去掉不明确的项
                     name_pinyin = self.P.get_pinyin(name).replace('-', '')  # 名字变拼音并去掉横杠
-                    dict[name_pinyin] = statement
+                    dic[name_pinyin] = statement
         self.countNum()
     
     def countNum(self):
         M2_count, M4_count, M5_count = 0, 0, 0
-        for key in dict.keys():
-            if 'M2' in dict[key]:
+        for key in dic.keys():
+            if 'M2' in dic[key]:
                 M2_count += 1
-            elif 'M5' in dict[key]:
+            elif 'M5' in dic[key]:
                 M5_count += 1
-            elif 'M4' in dict[key]:
+            elif 'M4' in dic[key]:
                 M4_count += 1
         print('M2_count: {}, M4_count: {}, M5_count: {}'.format(M2_count, M4_count, M5_count))
 
@@ -126,6 +126,8 @@ class ReadCSV():  # 2285 * 15
                             self.merge_protein_1 = self.merge_protein_1 | file_protein
                             self.intersection_protein_1 = self.intersection_protein_1 & file_protein
                             m2_logger.info('File: {} (type 001), has {} public proteins according to all the 001 files.\nThey are {}\n'.format(file, len(self.merge_protein_1 & file_protein), self.merge_protein_1 & file_protein))
+                            if not os.path.exists(os.path.join(self.useful_data_folder, file)):
+                                shutil.copy(os.path.join(root, file), os.path.join(self.useful_data_folder, file))
                         elif '002' in file:
                             self.file_count_2 += 1
                             if 'M2' in file:
@@ -204,55 +206,108 @@ class ReadCSV():  # 2285 * 15
                 print('Total file nums: {}, M2 num: {}/{}, M5 num: {}/{}'.format(len(files), M2_10_num, M2_num, M5_10_num, M5_num))
                     
             # print(self.all&all)
+                
+    def saveAsNpy(self, file_name, df, cols):
+        file_name = file_name[:-3]+'npy'
+        data_np = np.zeros((len(cols)-1, df.shape[0]))  # HLA-DR和HL-DR是同一个，所以-1
+        if 'HL-DR' in df.columns:  # 处理编辑错误的情况
+            data_np[-1] = df['HL-DR'].to_numpy()
+        # 处理多种混用的情况
+        elif 'CD19/CD56' in df.columns:
+            data_np[6] = df['CD19/CD56'].to_numpy()
+            data_np[11] = df['CD19/CD56'].to_numpy()
+        elif 'CD56/CD19' in df.columns:
+            data_np[6] = df['CD56/CD19'].to_numpy()
+            data_np[11] = df['CD56/CD19'].to_numpy()
+        elif 'CD19+CD56' in df.columns:
+            data_np[6] = df['CD19+CD56'].to_numpy()
+            data_np[11] = df['CD19+CD56'].to_numpy()
+        elif 'CD19/CD56/CD15' in df.columns:
+            data_np[6] = df['CD19/CD56/CD15'].to_numpy()
+            data_np[11] = df['CD19/CD56/CD15'].to_numpy()
+
+        for i, col in enumerate(cols[0:-1]):
+            if col in df.columns:
+                data_np[i] = df[col].to_numpy()
+            else:
+                continue
+        np.save(os.path.join(self.useful_data_folder, file_name), data_np)
+        return data_np
     
-    def readUseful(self, length=10000):
-        length = int(length)
-        useful_protein = ['CD19+CD56 FITC-A', 'CD13 PE-A','CD117 PerCP-Cy5-5-A', 'CD33 PE-Cy7-A', 'CD34 APC-A', 'CD7 APC-R700-A',
-       'CD38 APC-Cy7-A', 'DR V450-A', 'CD45 V500-C-A', 'CD11B BV605-A']
-        X, Y = list(), list()
+    def readUseful(self):
+        useful_items = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR',      'HL-DR']  # 16
         
         for root, dirs, files in os.walk(self.useful_data_folder):
             for file in files:
-                data = dt.fread(os.path.join(root, file)).to_pandas()
-                numpy_data = pd.DataFrame(data, columns=useful_protein).to_numpy()
-
-                # if 'M2' in file:
-                #     m2_logger.info(data.describe())
-                # elif 'M5' in file:
-                #     m5_logger.info(data.describe())
-                # else:
-                #     print('ERROR')
-                #     exit()
-
-                # 归一化
-                numpy_data[numpy_data<0] = 0.
-                numpy_data[numpy_data>1023] = 1023.
-                numpy_data = numpy_data/1023.
-                # 舍去长度小于 length 的数据
-                if numpy_data.shape[0] < length:
+                if not 'csv' in file:
                     continue
-                else:
-                    for i in range(int(numpy_data.shape[0]/10000.)):
-                        slice = numpy_data[i*length:(i+1)*length, :]
-                        X.append(slice)
-                        if 'M2' in file:
-                            Y.append(0)
-                        elif 'M5' in file:
-                            Y.append(1)
-                        else:
-                            print('ERROR')
-                            exit()
+                data = dt.fread(os.path.join(root, file)).to_pandas()
+                new_columns_dict = dict()
 
-                
+                # 修改列名
+                for item in data.columns:
+                    if ' ' in item:
+                        protein_name = item.split(' ')[0]
+                        new_columns_dict[item] = protein_name
+                    elif ('FSC' in item) or ('SSC' in item):
+                        new_columns_dict[item] = item
+                    else:
+                        # 没有空格说明这个通道没有放蛋白标记
+                        continue
+                data.rename(columns=new_columns_dict, inplace=True)
+
+                if 'M2' in file:
+                    m2_logger.info(data.describe())
+                elif 'M5' in file:
+                    m5_logger.info(data.describe())
+                else:
+                    print('ERROR')
+                    exit()
+
+                # 将某个病人的数据存成.npy数组文件
+                self.saveAsNpy(file, data, useful_items)
+        
+        return 0
+
+
+    def getDataset(self, length=10000):
+        length = int(length)
+        X, Y = list(), list()
+        # useful_items = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR',      'HL-DR']  # 16
+
+        for root, dirs, files in os.walk(self.useful_data_folder):
+            for file in files:
+                if 'npy' in file:
+                    numpy_data = np.load(os.path.join(root, file))
+                    # 归一化
+                    numpy_data[numpy_data<0] = 0.
+                    numpy_data[numpy_data>1023] = 1023.
+                    numpy_data = numpy_data/1023.
+                    # 舍去长度小于 length 的数据
+                    if numpy_data.shape[0] < length:
+                        pass
+                    else:
+                        for i in range(int(numpy_data.shape[0]/10000.)):
+                            slice = numpy_data[i*length:(i+1)*length, :]
+                            X.append(slice)
+                            if 'M2' in file:
+                                Y.append(0)
+                            elif 'M5' in file:
+                                Y.append(1)
+                            else:
+                                print('ERROR')
+                                exit()               
 
         return np.array(X), np.array(Y)
 
+# ==================================================================
 object = ReadCSV('Data/FinalSheet.csv')
 object.chooseNeed()
-print('病人类别字典: ', dict)
+print('病人类别字典: ', dic)
 
 if __name__ == '__main__':
-    object.findSameProteinAndSaveFile('Data/ExtractedCSV')
+    # object.findSameProteinAndSaveFile('Data/ExtractedCSV')
     # object.findSameProteinAndSaveFile('Data/PickedCSV')
-    # X, Y = object.readUseful()
+    object.readUseful()
+    object.getDataset()
     # print(X.shape, Y.shape)
