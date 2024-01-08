@@ -3,9 +3,9 @@ from utils.ReadCSV import ReadCSV
 from sklearn.model_selection import train_test_split
 import numpy as np
 
-class GasDataset(Dataset):
+class AMLDataset(Dataset):
     def __init__(self, args, isTrain=True) -> None:
-        super(GasDataset, self).__init__()
+        super(AMLDataset, self).__init__()
         self.args = args
         self.isTrain = isTrain
 
@@ -55,7 +55,7 @@ class GasDataset(Dataset):
 
         # random choose 51 sensors to be ZERO
         # x[self.fix_indices] = 0
-        return np.float32(x), np.int(y), np.float32(x_origin)  # 让类别从0开始
+        return np.float32(x.flatten()), np.int32(y), np.float32(x_origin)  # 让类别从0开始
 
     def __len__(self):
         return len(self.X)
@@ -121,9 +121,9 @@ if __name__ == '__main__':
     parser.add_argument('--initial_dim', default=2048, type=int)
     args = parser.parse_args()
 
-    object = GasDataset(args)
-    # input, target, _ = object.__getitem__(0)
-    # print(input)
+    object = AMLDataset(args)
+    input, target, _ = object.__getitem__(0)
+    print(input.shape)
     # indices = np.random.choice(np.arange(len(input)), replace=False,
     #                        size=int(len(input) * 0.2))
     # input[indices] = 0

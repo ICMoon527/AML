@@ -51,8 +51,8 @@ def draw_fig(args, data_list, name):
     # plt.show()
 
 def try_make_dir(d):
-    if not os.path.isdir(d):
-        os.mkdir(d)
+    if not os.path.exists(d):
+        os.makedirs(d)
 
 if __name__ == '__main__':
     # import numpy as np

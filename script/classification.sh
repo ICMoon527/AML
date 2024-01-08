@@ -1,6 +1,5 @@
 CUDA_VISIBLE_DEVICES=0 ~/anaconda3/envs/taizhou/bin/python main.py \
 --model DNN \
---initial_dim 256 \
 --optimizer Adam \
 --lr 1e-3 \
 --warmup_steps 10 \

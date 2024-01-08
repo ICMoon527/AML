@@ -1,6 +1,9 @@
 import os
 import pandas as pd
+import numpy as np
 
 if __name__ == '__main__':
-    df = pd.DataFrame({'a':[1,2,3],'b':[1,2,3]})
-    print(df['a'].to_numpy())
+    df = np.array([[1,2],
+                   [3,4],
+                   [5,6]])
+    print(df.flatten())

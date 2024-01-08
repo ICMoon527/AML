@@ -178,7 +178,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if args.deterministic:  # 就是方便复现
+    if args.deterministic:  # 方便复现
         print('\033[31mModel Deterministic\033[0m')
         torch.manual_seed(1234)
         torch.cuda.manual_seed(1234)
@@ -199,8 +199,8 @@ if __name__ == '__main__':
     """
     Read Data
     """
-    trainset = GasDataset.GasDataset(args, True)
-    testset = GasDataset.GasDataset(args, False)
+    trainset = AMLDataset.AMLDataset(args, True)
+    testset = AMLDataset.AMLDataset(args, False)
     if args.deterministic:
         trainloader = DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=2, worker_init_fn=np.random.seed(1234))
         testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=False, num_workers=2, worker_init_fn=np.random.seed(1234))
@@ -211,8 +211,8 @@ if __name__ == '__main__':
     """
     Choose model
     """
-    input_charac_num = 61
-    nClasses = 79
+    input_charac_num = 15 * 10000
+    nClasses = 2
     model_att = None
     if args.model == 'SVM':
         model = Model.SVM(args, input_charac_num, nClasses)

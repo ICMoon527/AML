@@ -1,122 +1,214 @@
-from torch.utils.data import Dataset
-from utils.ReadCSV import ReadCSV
-from sklearn.model_selection import train_test_split
+from turtle import forward
+import torch
 import numpy as np
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+import argparse
+import math
 
-class GasDataset(Dataset):
-    def __init__(self, args, isTrain=True) -> None:
-        super(GasDataset, self).__init__()
+
+class SVM(nn.Module):
+    def __init__(self, args, input_dim, output_dim) -> None:
+        super(SVM, self).__init__()
         self.args = args
-        self.isTrain = isTrain
 
-        '''
-        读取数据
-        '''
-        object = ReadCSV('data/All.csv')
-        X, Y = object.readAll()
-        X, Y = self.preprocess(X, Y)
-        self.MAX = np.max(X)
+        self.model = nn.Linear(input_dim, output_dim)
+
+    def forward(self, x):
+        y = self.model(x)
+        return y
+
+class DNN(nn.Module):
+    def __init__(self, args, input_dim, output_dim) -> None:
+        super(DNN, self).__init__()
+        self.args = args
+
+        self.layers = []
+        self.activate = {
+            'elu': nn.ELU,
+            'relu': nn.ReLU,
+            'softplus': nn.Softplus
+        }[args.nonlin]
+
+        self.layers.append(self.fullConnectedLayer(input_dim, input_dim*4, args.batchnorm))
+        self.layers.append(self.fullConnectedLayer(input_dim*4, input_dim*2, args.batchnorm))
+        self.layers.append(self.fullConnectedLayer(input_dim*2, input_dim/2, args.batchnorm))
+        self.layers.append(nn.Linear(input_dim/8, output_dim*2560))
+        self.layers.append(nn.Linear(output_dim*512, output_dim))
+
+        self.model = nn.Sequential(*self.layers)
+
+    def forward(self, x):
+        y = self.model(x)
+        return y
+
+    def fullConnectedLayer(self, input_dim, output_dim, batchnorm=False):
+        if batchnorm:
+            return nn.Sequential(
+                nn.Linear(input_dim, output_dim),
+                nn.BatchNorm1d(output_dim),
+                self.activate()
+            )
+        else:
+            return nn.Sequential(
+                nn.Dropout(p=self.args.dropout_rate, inplace=False),
+                nn.Linear(input_dim, output_dim),
+                self.activate()
+            )
+
+
+class ATTDNN(nn.Module):
+    def __init__(self, args, input_dim, output_dim) -> None:
+        super(ATTDNN, self).__init__()
+        self.args = args
+
+        self.layers = []
+        self.activate = {
+            'elu': nn.ELU,
+            'relu': nn.ReLU,
+            'softplus': nn.Softplus
+        }[args.nonlin]
+
+        self.layers.append(AttentionLayer(args, input_dim, args.nClasses*input_dim, args.nClasses))
+        self.layers.append(self.fullConnectedLayer(input_dim, 1024, args.batchnorm))
+        self.layers.append(self.fullConnectedLayer(1024, 2048, args.batchnorm))
+        self.layers.append(self.fullConnectedLayer(2048, 256, args.batchnorm))
+        self.layers.append(nn.Linear(256, output_dim))
+
+        self.model = nn.Sequential(*self.layers)
+
+    def forward(self, x):
+        y = self.model(x)
+        return y
+
+    def fullConnectedLayer(self, input_dim, output_dim, batchnorm=False):
+        if batchnorm:
+            return nn.Sequential(
+                nn.Linear(input_dim, output_dim),
+                nn.BatchNorm1d(output_dim),
+                self.activate()
+            )
+        else:
+            return nn.Sequential(
+                nn.Dropout(p=self.args.dropout_rate, inplace=False),
+                nn.Linear(input_dim, output_dim),
+                self.activate()
+            )
+
+
+class AttentionLayer(nn.Module):
+    def __init__(self, args, in_size, hidden_size, num_attention_heads):
+        """
+        Softmax(Q@K.T)@V
+        """
+        super(AttentionLayer, self).__init__()
+
+        self.activate = {
+            'elu': nn.ELU,
+            'relu': nn.ReLU,
+            'softplus': nn.Softplus,
+            'sigmoid': nn.Sigmoid
+        }[args.nonlin]
+
+        self.num_attention_heads = num_attention_heads
+        self.attention_head_size = int(hidden_size / self.num_attention_heads)
+
+        self.key_layer = nn.Linear(in_size, hidden_size)
+        self.query_layer = nn.Linear(in_size, hidden_size)
+        self.value_layer = nn.Linear(in_size, hidden_size)
+
+    def forward(self, x):
+        key = self.activate()(self.key_layer(x))  # (batch, hidden_size)
+        query = self.activate()(self.query_layer(x))
+        value = self.activate()(self.value_layer(x))
+
+        key_heads = self.trans_to_multiple_heads(key)  # (batch, heads_num, head_size)
+        query_heads = self.trans_to_multiple_heads(query)
+        value_heads = self.trans_to_multiple_heads(value)
+
+        attention_scores = torch.matmul(key_heads, query_heads.permute(0, 2, 1))  # (batch, heads_num, heads_num)
+        attention_scores = attention_scores / math.sqrt(self.attention_head_size)
+        attention_scores_normalized = F.softmax(attention_scores, dim=-1)
+
+        out = torch.matmul(attention_scores_normalized, value_heads)  # (batch, heads_num, head_size)
+
+        return out.mean(dim=-2)
+
+
+    def trans_to_multiple_heads(self, x):
+        new_size = x.size()[ : -1] + (self.num_attention_heads, self.attention_head_size)
+        x = x.view(new_size)
+        return x
+
+
+class UDNN(nn.Module):
+    def __init__(self, args, input_dim, output_dim, hidden_dim=2048) -> None:
+        super(UDNN, self).__init__()
+        self.args = args
+        self.activate = {
+            'relu': nn.ReLU,
+            'elu': nn.ELU,
+            'softplus': nn.Softplus
+        }[args.nonlin]
+
+        self.initial_layer = self.fullConnectedLayer(input_dim, args.initial_dim) # expand dim
         
-        self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(X, Y, test_size=0.2, shuffle=True, random_state=np.random.seed(1234))
+        self.down_1 = self.fullConnectedLayer(hidden_dim, hidden_dim/2)
+        self.down_2 = self.fullConnectedLayer(hidden_dim/2, hidden_dim/4)
+        self.down_3 = self.fullConnectedLayer(hidden_dim/4, hidden_dim/8)
+
+        self.up_1 = self.fullConnectedLayer(hidden_dim/8, hidden_dim/4)
+        self.up_2 = self.fullConnectedLayer(hidden_dim/4, hidden_dim/2)
+        self.up_3 = self.fullConnectedLayer(hidden_dim/2, hidden_dim)
         
-        if isTrain:
-            self.X = self.X_train
-            self.Y = self.Y_train
-        else:
-            self.X = self.X_test
-            self.Y = self.Y_test
+        self.output_layer = self.fullConnectedLayer(args.initial_dim, output_dim)
 
-        '''
-        其他数据操作
-        '''
-        # self.X, self.Y = self.dataAugmentation(self.X, self.Y, self.X.shape[1])
-        # self.X, self.Y = self.addPerturbation(self.X, self.Y, 0.01)
-        np.random.seed(2)
-        self.fix_indices = np.random.choice(np.arange(len(self.X[0])), replace=False,
-                                        size=int(len(self.X[0])*5.1/6.0))
-        np.random.seed(1234)
+    def forward(self, x):
 
-    def __getitem__(self, index):
-        x, y = self.X[index], self.Y[index]
-        x_origin = x.copy()
-        if self.args.input_droprate > 0:
-            """
-            some detectors fail
-            """
-            assert self.args.input_droprate < 1
-            if self.isTrain==False and self.args.dropout_rate>0 and self.args.input_droprate>0:  # 在测试时不要加双重dropout
-                indices = np.random.choice(np.arange(len(x)), replace=False,
-                                        size=int(len(x) * self.args.input_droprate))
-                x[indices] = 0  # some detectors fail
-            elif self.args.dropout_rate==0 and self.args.input_droprate>0:  # 训练和测试都让输入随机失活
-                indices = np.random.choice(np.arange(len(x)), replace=False,
-                                        size=int(len(x) * self.args.input_droprate))
-                x[indices] = 0  # some detectors fail
+        # initial_out = self.initial_layer(x)  # 2048
+        # down_1_out = self.down_1(initial_out)  # 1024
+        # down_2_out = self.down_2(down_1_out)  # 512
 
-        # random choose 51 sensors to be ZERO
-        x[self.fix_indices] = 0
-        return np.float32(x), np.int(y-1), np.float32(x_origin)  # 让类别从0开始
+        # down_3_out = self.down_3(down_2_out)  # 256
+        
+        # up_1_out = self.up_1(down_3_out)  # 512
+        # up_2_out = self.up_2((up_1_out+down_2_out)/2)  # 1024
+        # up_3_out = self.up_3((up_2_out+down_1_out)/2)  # 2048
+        # out = self.output_layer((up_3_out+initial_out)/2)
 
-    def __len__(self):
-        return len(self.X)
+        initial_out = self.initial_layer(x)  # 256
+        up_1_out = self.up_1(initial_out)  # 512
+        up_2_out = self.up_2(up_1_out)  # 1024
+        up_3_out = self.up_3(up_2_out)  # 2048
 
-    def countBigDataNum(self, array, threshold):
-        count = np.sum(array>threshold)
-        return count
+        down_1_out = self.down_1(up_3_out)  # 1024
+        down_2_out = self.down_2(down_1_out)  # 512
+        down_3_out = self.down_3(down_2_out)  # 256
+        out = self.output_layer(down_3_out)
 
-    def dataAugmentation(self, input, target, cols_num, range_=20):
-        if self.isTrain:
-            # 训练阶段，复制多份数据，并在选定范围内缩放，默认上下浮动20%
-            new_X = np.expand_dims(input, axis=0)
-            new_Y = np.expand_dims(target, axis=0)
-            new_X = np.repeat(new_X, 2*range_+1, axis=0)
-            new_Y = np.repeat(new_Y, 2*range_+1, axis=0)
-            for i in range(2*range_+1):
-                new_X[i] = new_X[i] / 100. * (100+i-range_)  # scale
-            new_X = new_X.reshape(-1, cols_num)
-            new_Y = new_Y.reshape(-1)
-            return new_X, new_Y
-        else:
-            # 在测试阶段，不变
-            return input, target
+        return out
 
-    def preprocess(self, x, y):
-        # print('MAX: ', np.max(x))
-        # print('MEAN: ', np.mean(x))  # 95.04803863395959
-        # print(self.countBigDataNum(x, 5000))  # 61998
-        # print(self.countBigDataNum(x, 10000))  # 9567
-        # print(self.countBigDataNum(x, 15000))  # 1927
-        # print(self.countBigDataNum(x, 20000))  # 400
-        # print(self.countBigDataNum(x, 25000))  # 57
-        # print(self.countBigDataNum(x, 30000))  # 3
+    def fullConnectedLayer(self, input_dim, output_dim):
 
-        # min-max scale
-        # x = x / np.max(x)
+        return nn.Sequential(
+            nn.Dropout(p=self.args.dropout_rate, inplace=False),
+            nn.Linear(int(input_dim), int(output_dim)),
+            self.activate()
+        )
 
-        return x, y
-
-    def addPerturbation(self, x, y, scale=0.01):
-        if self.isTrain:
-            return x, y
-        else:
-            # 测试阶段，对测试数据加入随机百分比微扰
-            scale = np.random.random(x.shape) * scale * 2 - scale  # (-scale, scale)
-            x = x * (scale+1)
-            return x, y
 
 if __name__ == '__main__':
-    import argparse
-    import torch
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, choices=['SVM', 'DNN', 'ATTDNN', 'preDN', 'DNNATT', 'UDNN'], default='DNN')
+    parser.add_argument('--model', type=str, choices=['SVM', 'DNN', 'ATTDNN'], default='DNN')
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--batchsize", type=int, default=10240)  # 486400
     parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else 'cpu', choices=["cpu", "cuda"])
     parser.add_argument('--optimizer', default='Adam', type=str, choices=['SGD','Adam','Adamax'])
-    parser.add_argument('--save_dir', default='./Results/79sources', type=str)
-    parser.add_argument('--nonlin', default="elu", type=str, choices=["relu", "elu", "softplus", 'sigmoid'])
-    parser.add_argument('--weight_decay', default=0., type=float, help='coefficient for weight decay')
+    parser.add_argument('--save_dir', default='./Results', type=str)
+    parser.add_argument('--nonlin', default="elu", type=str, choices=["relu", "elu", "softplus"])
+    parser.add_argument('--weight_decay', default=5e-4, type=float, help='coefficient for weight decay')
     parser.add_argument('-deterministic', '--deterministic', dest='deterministic', action='store_true',
                        help='fix random seeds and set cuda deterministic')
     parser.add_argument('--warmup_steps', default=10, type=int)
@@ -125,15 +217,19 @@ if __name__ == '__main__':
     parser.add_argument('-batchnorm', '--batchnorm', action='store_true')
     parser.add_argument('--dropout_rate', default=0., type=float)
     parser.add_argument('--nClasses', default=79, type=int)
-    parser.add_argument('--input_droprate', default=0., type=float, help='the max rate of the detectors may fail')
-    parser.add_argument('--initial_dim', default=2048, type=int)
-    args = parser.parse_args()
+    parser.add_argument('--initial_dim', default=256, type=int)
 
-    object = GasDataset(args)
-    input, target, _ = object.__getitem__(0)
-    print(input)
-    indices = np.random.choice(np.arange(len(input)), replace=False,
-                           size=int(len(input) * 0.2))
-    input[indices] = 0
-    print(input)
-    print(target)
+    args = parser.parse_args()
+    args.device = torch.device('cuda')
+
+    model = UDNN(args, 61, 79).to(args.device)
+    x = torch.rand(10, 61).to(args.device)
+
+    x.requires_grad_()
+    y = model(x)
+    # print(model)
+    print(y.size())
+    # target = torch.ones_like(y)
+    # loss = torch.nn.MSELoss()(y, target)
+    # print(loss)
+    # loss.backward()
