@@ -13,8 +13,7 @@ class GasDataset(Dataset):
         读取数据, M2-粒细胞-0, M5-单细胞-1
         '''
         object = ReadCSV()
-        X, Y = object.readUseful()
-        exit()
+        X, Y = object.getDataset()
         X, Y = self.preprocess(X, Y)
         self.MAX = np.max(X)
         
@@ -32,31 +31,31 @@ class GasDataset(Dataset):
         '''
         # self.X, self.Y = self.dataAugmentation(self.X, self.Y, self.X.shape[1])
         # self.X, self.Y = self.addPerturbation(self.X, self.Y, 0.01)
-        np.random.seed(2)
-        self.fix_indices = np.random.choice(np.arange(len(self.X[0])), replace=False,
-                                        size=int(len(self.X[0])*5.1/6.0))
+        # np.random.seed(1234)
+        # self.fix_indices = np.random.choice(np.arange(len(self.X[0])), replace=False,
+        #                                 size=int(len(self.X[0])*5.1/6.0))
         np.random.seed(1234)
 
     def __getitem__(self, index):
         x, y = self.X[index], self.Y[index]
         x_origin = x.copy()
-        if self.args.input_droprate > 0:
-            """
-            some detectors fail
-            """
-            assert self.args.input_droprate < 1
-            if self.isTrain==False and self.args.dropout_rate>0 and self.args.input_droprate>0:  # 在测试时不要加双重dropout
-                indices = np.random.choice(np.arange(len(x)), replace=False,
-                                        size=int(len(x) * self.args.input_droprate))
-                x[indices] = 0  # some detectors fail
-            elif self.args.dropout_rate==0 and self.args.input_droprate>0:  # 训练和测试都让输入随机失活
-                indices = np.random.choice(np.arange(len(x)), replace=False,
-                                        size=int(len(x) * self.args.input_droprate))
-                x[indices] = 0  # some detectors fail
+        # if self.args.input_droprate > 0:
+        #     """
+        #     some detectors fail
+        #     """
+        #     assert self.args.input_droprate < 1
+        #     if self.isTrain==False and self.args.dropout_rate>0 and self.args.input_droprate>0:  # 在测试时不要加双重dropout
+        #         indices = np.random.choice(np.arange(len(x)), replace=False,
+        #                                 size=int(len(x) * self.args.input_droprate))
+        #         x[indices] = 0  # some detectors fail
+        #     elif self.args.dropout_rate==0 and self.args.input_droprate>0:  # 训练和测试都让输入随机失活
+        #         indices = np.random.choice(np.arange(len(x)), replace=False,
+        #                                 size=int(len(x) * self.args.input_droprate))
+        #         x[indices] = 0  # some detectors fail
 
         # random choose 51 sensors to be ZERO
-        x[self.fix_indices] = 0
-        return np.float32(x), np.int(y-1), np.float32(x_origin)  # 让类别从0开始
+        # x[self.fix_indices] = 0
+        return np.float32(x), np.int(y), np.float32(x_origin)  # 让类别从0开始
 
     def __len__(self):
         return len(self.X)
@@ -83,7 +82,8 @@ class GasDataset(Dataset):
 
     def preprocess(self, x, y):
         # min-max scale
-        # x = x / np.max(x)
+        x = x / 1023.
+        x = x.transpose(0, 2, 1)  # (num, 10000, 15)
 
         return x, y
 

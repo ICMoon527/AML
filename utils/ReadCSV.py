@@ -4,7 +4,10 @@ import numpy as np
 from xpinyin import Pinyin
 import os
 import shutil
-import logger
+if __name__ == '__main__':
+    import logger
+else:
+    from utils import logger
 import json
 
 dic = {}
@@ -279,16 +282,17 @@ class ReadCSV():  # 2285 * 15
             for file in files:
                 if 'npy' in file:
                     numpy_data = np.load(os.path.join(root, file))
+                    
                     # 归一化
                     numpy_data[numpy_data<0] = 0.
                     numpy_data[numpy_data>1023] = 1023.
-                    numpy_data = numpy_data/1023.
+                    # numpy_data = numpy_data/1023.
                     # 舍去长度小于 length 的数据
-                    if numpy_data.shape[0] < length:
-                        pass
+                    if numpy_data.shape[1] < length:
+                        continue
                     else:
-                        for i in range(int(numpy_data.shape[0]/10000.)):
-                            slice = numpy_data[i*length:(i+1)*length, :]
+                        for i in range(int(numpy_data.shape[1]/10000.)):
+                            slice = numpy_data[:, i*length:(i+1)*length]
                             X.append(slice)
                             if 'M2' in file:
                                 Y.append(0)
@@ -308,6 +312,6 @@ print('病人类别字典: ', dic)
 if __name__ == '__main__':
     # object.findSameProteinAndSaveFile('Data/ExtractedCSV')
     # object.findSameProteinAndSaveFile('Data/PickedCSV')
-    object.readUseful()
-    object.getDataset()
-    # print(X.shape, Y.shape)
+    # object.readUseful()
+    X, Y = object.getDataset()
+    print(X.shape, Y.shape, np.count_nonzero(Y==0), X.max())

@@ -16,7 +16,7 @@ import numpy as np
 from torch.autograd import Variable
 import torch.nn as nn
 
-bad_classes = [25, 27, 38, 39, 40, 41, 42, 44, 46, 47, 50, 51, 52, 53]
+# bad_classes = [25, 27, 38, 39, 40, 41, 42, 44, 46, 47, 50, 51, 52, 53]
 
 # class_weights = torch.Tensor([ 1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  
 #                                1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.,  
@@ -101,7 +101,8 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
         }
         
         prefix = args.model + '_' + args.optimizer + '_epoch_' + str(epoch) + '_'
-        # torch.save(state, os.path.join(args.save_dir, prefix+'checkpoint.t7'))
+        # 中途保存防止意外
+        torch.save(state, os.path.join(args.save_dir, prefix+'checkpoint.t7'))
 
     return loss.detach().item(), accuracy
 
@@ -156,11 +157,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str, choices=['SVM', 'DNN', 'ATTDNN', 'preDN', 'DNNATT', 'UDNN', 'Resume'], default='DNN')
     parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--batchsize", type=int, default=10240)  # 486400
+    parser.add_argument("--batchsize", type=int, default=128)  # 486400
     parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--device", default="cpu" if torch.cuda.is_available() else 'cpu', choices=["cpu", "cuda"])
     parser.add_argument('--optimizer', default='Adam', type=str, choices=['SGD','Adam','Adamax'])
-    parser.add_argument('--save_dir', default='./Results/79sources', type=str)
+    parser.add_argument('--save_dir', default='./Results/DNN', type=str)
     parser.add_argument('--nonlin', default="elu", type=str, choices=["relu", "elu", "softplus", 'sigmoid'])
     parser.add_argument('--weight_decay', default=0., type=float, help='coefficient for weight decay')
     parser.add_argument('-deterministic', '--deterministic', dest='deterministic', action='store_true',

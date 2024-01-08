@@ -1,0 +1,17 @@
+CUDA_VISIBLE_DEVICES=0 ~/anaconda3/envs/taizhou/bin/python main.py \
+--model DNN \
+--initial_dim 256 \
+--optimizer Adam \
+--lr 1e-3 \
+--warmup_steps 10 \
+--warmup_start_lr 1e-5 \
+--power 0.5 \
+--batchsize 128 \
+--epochs 200 \
+--device cuda \
+--nonlin elu \
+--save_dir ./Results/DNN \
+--weight_decay 0. \
+--dropout_rate 0. \
+--input_droprate 0. \
+-deterministic
