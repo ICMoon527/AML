@@ -1,4 +1,4 @@
-CUDA_VISIBLE_DEVICES=0 ~/anaconda3/envs/taizhou/bin/python main.py \
+CUDA_VISIBLE_DEVICES=1,2,3,4,5,6 ~/anaconda3/envs/taizhou/bin/python main.py \
 --model DNN \
 --optimizer Adam \
 --lr 1e-3 \
@@ -6,6 +6,7 @@ CUDA_VISIBLE_DEVICES=0 ~/anaconda3/envs/taizhou/bin/python main.py \
 --warmup_start_lr 1e-5 \
 --power 0.5 \
 --batchsize 128 \
+--length 10000 \
 --epochs 200 \
 --device cuda \
 --nonlin elu \

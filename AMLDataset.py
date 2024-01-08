@@ -2,6 +2,7 @@ from torch.utils.data import Dataset
 from utils.ReadCSV import ReadCSV
 from sklearn.model_selection import train_test_split
 import numpy as np
+import torch
 
 class AMLDataset(Dataset):
     def __init__(self, args, isTrain=True) -> None:
@@ -13,11 +14,12 @@ class AMLDataset(Dataset):
         读取数据, M2-粒细胞-0, M5-单细胞-1
         '''
         object = ReadCSV()
-        X, Y = object.getDataset()
+        X, Y = object.getDataset(length=args.length)
         X, Y = self.preprocess(X, Y)
         self.MAX = np.max(X)
         
         self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(X, Y, test_size=0.2, shuffle=True, random_state=np.random.seed(1234))
+        print('训练集长度: {}, 测试集长度: {}'.format(len(self.X_train), len(self.X_test)))
         
         if isTrain:
             self.X = self.X_train

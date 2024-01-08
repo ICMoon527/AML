@@ -291,7 +291,7 @@ class ReadCSV():  # 2285 * 15
                     if numpy_data.shape[1] < length:
                         continue
                     else:
-                        for i in range(int(numpy_data.shape[1]/10000.)):
+                        for i in range(int(numpy_data.shape[1]/float(length))):
                             slice = numpy_data[:, i*length:(i+1)*length]
                             X.append(slice)
                             if 'M2' in file:

@@ -2,6 +2,7 @@ import os
 import random
 import argparse
 import torch
+import torch.nn.functional as F
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
 import Model
@@ -75,12 +76,12 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
         if model_att is not None:
             inputs = model_att(inputs)  # 前面预训练网络的输出
         out = model(inputs)
-        # loss = criterion(out, F.one_hot(targets, num_classes=args.nClasses)) # Loss for focal loss
-        loss = criterion(out, targets) # Loss for CE loss
+        loss = criterion(out, F.one_hot(targets.long(), num_classes=args.nClasses).float()) # Loss for focal loss
+        # loss = criterion(out, targets) # Loss for CE loss
         loss.backward()
         optimizer.step()
 
-        if batch_idx % 10 == 0:
+        if batch_idx % 1 == 0:
             _, predicted = torch.max(out.detach(), 1)
             total += targets.size(0)
             correct += predicted.eq(targets.detach()).cpu().sum()
@@ -157,9 +158,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str, choices=['SVM', 'DNN', 'ATTDNN', 'preDN', 'DNNATT', 'UDNN', 'Resume'], default='DNN')
     parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--batchsize", type=int, default=128)  # 486400
+    parser.add_argument("--batchsize", type=int, default=128)
+    parser.add_argument("--length", type=int, default=1000)
     parser.add_argument("--epochs", type=int, default=200)
-    parser.add_argument("--device", default="cpu" if torch.cuda.is_available() else 'cpu', choices=["cpu", "cuda"])
+    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else 'cpu', choices=["cpu", "cuda"])
     parser.add_argument('--optimizer', default='Adam', type=str, choices=['SGD','Adam','Adamax'])
     parser.add_argument('--save_dir', default='./Results/DNN', type=str)
     parser.add_argument('--nonlin', default="elu", type=str, choices=["relu", "elu", "softplus", 'sigmoid'])
@@ -171,7 +173,7 @@ if __name__ == '__main__':
     parser.add_argument('--power', default=0.5, type=float)
     parser.add_argument('-batchnorm', '--batchnorm', action='store_true')
     parser.add_argument('--dropout_rate', default=0., type=float)
-    parser.add_argument('--nClasses', default=79, type=int)
+    parser.add_argument('--nClasses', default=2, type=int)
     parser.add_argument('--input_droprate', default=0., type=float, help='the max rate of the detectors may fail')
     parser.add_argument('--initial_dim', default=256, type=int)
     parser.add_argument('--continueFile', default='./Results/79sources/DNN-Adam-0-3000-largerRange-focalLoss/bk.t7', type=str)
@@ -211,7 +213,7 @@ if __name__ == '__main__':
     """
     Choose model
     """
-    input_charac_num = 15 * 10000
+    input_charac_num = 15 * args.length
     nClasses = 2
     model_att = None
     if args.model == 'SVM':

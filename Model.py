@@ -31,11 +31,11 @@ class DNN(nn.Module):
             'softplus': nn.Softplus
         }[args.nonlin]
 
-        self.layers.append(self.fullConnectedLayer(input_dim, input_dim*4, args.batchnorm))
-        self.layers.append(self.fullConnectedLayer(input_dim*4, input_dim*2, args.batchnorm))
-        self.layers.append(self.fullConnectedLayer(input_dim*2, input_dim/2, args.batchnorm))
-        self.layers.append(nn.Linear(input_dim/8, output_dim*2560))
-        self.layers.append(nn.Linear(output_dim*512, output_dim))
+        self.layers.append(self.fullConnectedLayer(input_dim, output_dim*1536, args.batchnorm))
+        self.layers.append(self.fullConnectedLayer(output_dim*1536, output_dim*512, args.batchnorm))
+        self.layers.append(self.fullConnectedLayer(output_dim*512, output_dim*128, args.batchnorm))
+        # self.layers.append(nn.Linear(input_dim/4, output_dim*256))
+        self.layers.append(nn.Linear(output_dim*128, output_dim))
 
         self.model = nn.Sequential(*self.layers)
 
