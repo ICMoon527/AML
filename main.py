@@ -130,7 +130,7 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
             'epoch': epoch,
         }
         
-        prefix = args.model + '_' + args.optimizer + '_epoch_' + str(epoch) + '_'
+        prefix = args.model + '_' + args.optimizer + '_temp_'
         # 中途保存防止意外
         torch.save(state, os.path.join(args.save_dir, prefix+'checkpoint.t7'))
 
@@ -300,6 +300,7 @@ if __name__ == '__main__':
     """
     # set up a logger
     logger = setup_logger(args.model+'_'+args.optimizer, args.save_dir, 0, args.model+'_'+args.optimizer+'_log.txt', mode='w+')
+    logger.info(args)
 
     if args.model == 'preDN':
         logger.info('pretrained model {}_checkpoint.t7 is loaded'.format(recover_result))
