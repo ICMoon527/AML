@@ -84,7 +84,7 @@ class AMLDataset(Dataset):
 
     def preprocess(self, x, y):
         # min-max scale
-        # x = x / 1023.
+        x = x / 1023.
         x = x.transpose(0, 2, 1)  # (num, 10000, 15)
 
         return x, y

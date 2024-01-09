@@ -92,7 +92,36 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
                                 accuracy,
                                 correct, total))
             
-    if epoch % 100 == 1:
+    if epoch % 10 == 1:
+        model.eval()
+        correct = 0.
+        total = 0
+
+        predicted_list = []
+        target_list = []
+
+        for batch_idx, (inputs, targets, _) in enumerate(testloader):
+            if args.device == torch.device('cuda'):
+                inputs, targets = inputs.cuda(), targets.cuda()
+            inputs, targets = Variable(inputs, requires_grad=False), Variable(targets)
+
+            if model_att is not None:
+                inputs = model_att(inputs)
+            out = model(inputs)  # (batch, nClasses)
+            _, predicted = torch.max(out.detach(), 1)
+            correct += predicted.eq(targets.detach()).sum().item()
+            total += targets.size(0)
+
+            predicted_list.append(predicted.cpu().numpy())
+            target_list.append(targets.cpu().numpy())
+        
+        predicted_list = np.hstack(predicted_list)
+        target_list = np.hstack(target_list)
+
+        accuracy = 100. * float(correct) / float(total)
+        logger.info("\n| Validation Epoch #%d\t\t\taccuracy =  %.4f" % (epoch, accuracy))
+
+        # 保存模型
         logger.info('\n| Saving model...\t\t\taccuracy = %.4f' % (accuracy))
         state = {
             'model': model.module if isinstance(model, torch.nn.DataParallel) else model,
@@ -132,7 +161,7 @@ def test(best_result, args, model, epoch, testloader, logger, model_att):
     
     predicted_list = np.hstack(predicted_list)
     target_list = np.hstack(target_list)
-    classification_report = metrics.classification_report(target_list, predicted_list, target_names=['Source '+str(i+1) for i in range(79)])
+    classification_report = metrics.classification_report(target_list, predicted_list, target_names=['Patient Type '+str(i+1) for i in range(2)])
 
     accuracy = 100. * float(correct) / float(total)
     logger.info("\n| Validation Epoch #%d\t\t\taccuracy =  %.4f" % (epoch, accuracy))
