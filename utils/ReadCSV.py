@@ -25,6 +25,8 @@ class ReadCSV():  # 2285 * 15
             os.mkdir(self.saved_folder)
         if not os.path.exists(self.useful_data_folder):
             os.mkdir(self.useful_data_folder)
+        if not os.path.exists(self.useful_data_folder+'002'):
+            os.mkdir(self.useful_data_folder+'002')
 
         self.all = {'FSC-W', 'CD15 BV605-A', 'CD64 PE-A', 'FSC-A', 'DR V450-A', 'CD123 APC-R700-A', 'MPO PE-A', 'CD11B V450-A', 'SSC-W', 'CD45 V500-C-A', 
                     'CD71 FITC-A', 'HLA-DR APC-A', 'cCD3 APC-Cy7-A', 'CD56 FITC-A', 'CD123 APC-Cy7-A', 'CD19/CD56/CD15 FITC-A', 'FSC-H', 'CD19/CD56 FITC-A', 
@@ -128,9 +130,9 @@ class ReadCSV():  # 2285 * 15
 
                             self.merge_protein_1 = self.merge_protein_1 | file_protein
                             self.intersection_protein_1 = self.intersection_protein_1 & file_protein
-                            m2_logger.info('File: {} (type 001), has {} public proteins according to all the 001 files.\nThey are {}\n'.format(file, len(self.merge_protein_1 & file_protein), self.merge_protein_1 & file_protein))
-                            if not os.path.exists(os.path.join(self.useful_data_folder, file)):
-                                shutil.copy(os.path.join(root, file), os.path.join(self.useful_data_folder, file))
+                            # m2_logger.info('File: {} (type 001), has {} public proteins according to all the 001 files.\nThey are {}\n'.format(file, len(self.merge_protein_1 & file_protein), self.merge_protein_1 & file_protein))
+                            # if not os.path.exists(os.path.join(self.useful_data_folder, file)):
+                            #     shutil.copy(os.path.join(root, file), os.path.join(self.useful_data_folder, file))
                         elif '002' in file:
                             self.file_count_2 += 1
                             if 'M2' in file:
@@ -138,6 +140,9 @@ class ReadCSV():  # 2285 * 15
 
                             self.merge_protein_2 = self.merge_protein_2 | file_protein
                             self.intersection_protein_2 = self.intersection_protein_2 & file_protein
+                            m2_logger.info('File: {} (type 002), has {} public proteins according to all the 002 files.\nThey are {}\n'.format(file, len(self.merge_protein_2 & file_protein), self.merge_protein_2 & file_protein))
+                            if not os.path.exists(os.path.join(self.useful_data_folder+'002', file)):
+                                shutil.copy(os.path.join(root, file), os.path.join(self.useful_data_folder+'002', file))
                         elif '003' in file:
                             self.file_count_3 += 1
                             if 'M2' in file:
@@ -210,37 +215,44 @@ class ReadCSV():  # 2285 * 15
                     
             # print(self.all&all)
                 
-    def saveAsNpy(self, file_name, df, cols):
+    def saveAsNpy(self, path, file_name, df, cols, useless_num):
         file_name = file_name[:-3]+'npy'
-        data_np = np.zeros((len(cols)-1, df.shape[0]))  # HLA-DR和HL-DR是同一个，所以-1
-        if 'HL-DR' in df.columns:  # 处理编辑错误的情况
-            data_np[-1] = df['HL-DR'].to_numpy()
-        # 处理多种混用的情况
-        elif 'CD19/CD56' in df.columns:
-            data_np[6] = df['CD19/CD56'].to_numpy()
-            data_np[11] = df['CD19/CD56'].to_numpy()
-        elif 'CD56/CD19' in df.columns:
-            data_np[6] = df['CD56/CD19'].to_numpy()
-            data_np[11] = df['CD56/CD19'].to_numpy()
-        elif 'CD19+CD56' in df.columns:
-            data_np[6] = df['CD19+CD56'].to_numpy()
-            data_np[11] = df['CD19+CD56'].to_numpy()
-        elif 'CD19/CD56/CD15' in df.columns:
-            data_np[6] = df['CD19/CD56/CD15'].to_numpy()
-            data_np[11] = df['CD19/CD56/CD15'].to_numpy()
+        data_np = np.zeros((len(cols)-useless_num, df.shape[0]))  # HLA-DR和HL-DR是同一个，所以-1
 
-        for i, col in enumerate(cols[0:-1]):
+        if '002' in path:
+            if 'HL-DR' in df.columns:  # 处理编辑错误的情况
+                data_np[-1] = df['HL-DR'].to_numpy()
+            elif '11b' in df.columns:  # 处理编辑错误的情况
+                data_np[4] = df['11b'].to_numpy()
+        else:
+            if 'HL-DR' in df.columns:  # 处理编辑错误的情况
+                data_np[-1] = df['HL-DR'].to_numpy()
+            # 处理多种混用的情况
+            elif 'CD19/CD56' in df.columns:
+                data_np[6] = df['CD19/CD56'].to_numpy()
+                data_np[11] = df['CD19/CD56'].to_numpy()
+            elif 'CD56/CD19' in df.columns:
+                data_np[6] = df['CD56/CD19'].to_numpy()
+                data_np[11] = df['CD56/CD19'].to_numpy()
+            elif 'CD19+CD56' in df.columns:
+                data_np[6] = df['CD19+CD56'].to_numpy()
+                data_np[11] = df['CD19+CD56'].to_numpy()
+            elif 'CD19/CD56/CD15' in df.columns:
+                data_np[6] = df['CD19/CD56/CD15'].to_numpy()
+                data_np[11] = df['CD19/CD56/CD15'].to_numpy()
+
+        for i, col in enumerate(cols[0:-useless_num]):
             if col in df.columns:
                 data_np[i] = df[col].to_numpy()
             else:
                 continue
-        np.save(os.path.join(self.useful_data_folder, file_name), data_np)
+        np.save(os.path.join(path, file_name), data_np)
         return data_np
     
-    def readUseful(self):
-        useful_items = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR',      'HL-DR']  # 16
+    def readUseful(self, path):
+        useful_items = ['FSC-A', 'FSC-H', 'SSC-A', 'CD7', 'CD11B', 'CD13', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'HLA-DR',      'HL-DR', '11b']
         
-        for root, dirs, files in os.walk(self.useful_data_folder):
+        for root, dirs, files in os.walk(path):
             for file in files:
                 if not 'csv' in file:
                     continue
@@ -268,17 +280,17 @@ class ReadCSV():  # 2285 * 15
                     exit()
 
                 # 将某个病人的数据存成.npy数组文件
-                self.saveAsNpy(file, data, useful_items)
+                self.saveAsNpy(path, file, data, useful_items, useless_num=2)
         
         return 0
 
 
-    def getDataset(self, length=10000):
+    def getDataset(self, path, length=10000):
         length = int(length)
         X, Y = list(), list()
         # useful_items = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR',      'HL-DR']  # 16
 
-        for root, dirs, files in os.walk(self.useful_data_folder):
+        for root, dirs, files in os.walk(path):
             for file in files:
                 if 'npy' in file:
                     numpy_data = np.load(os.path.join(root, file))
@@ -312,6 +324,6 @@ print('病人类别字典: ', dic)
 if __name__ == '__main__':
     # object.findSameProteinAndSaveFile('Data/ExtractedCSV')
     # object.findSameProteinAndSaveFile('Data/PickedCSV')
-    # object.readUseful()
-    X, Y = object.getDataset()
-    print(X.shape, Y.shape, np.count_nonzero(Y==0), X.max())
+    object.readUseful(object.useful_data_folder+'002')
+    # X, Y = object.getDataset()
+    # print(X.shape, Y.shape, np.count_nonzero(Y==0), X.max())

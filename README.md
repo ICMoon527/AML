@@ -26,7 +26,18 @@
     去掉极少使用的蛋白后：'CD16', 'CD15', 'CD9', 'CD14', 'CD123', 'HL-DR', 'CD64', 以及错误的蛋白名称'HL-DR'要纠正为'HLA-DR'，还剩
     {'CD45', 'CD19', 'CD34', 'CD33', 'CD38', 'CD13', 'DR', 'CD7', 'CD56', 'CD11B', 'HLA-DR', 'CD117'}共12个蛋白标签
     再加上物理标签：
-    {'FSC-A', 'FSC-H', 'SSC-A', 'CD45', 'CD19', 'CD34', 'CD33', 'CD38', 'CD13', 'DR', 'CD7', 'CD56', 'CD11B', 'HLA-DR', 'CD117'} 3物理+12蛋白
+    {'FSC-A', 'FSC-H', 'SSC-A', 'CD45', 'CD19', 'CD34', 'CD33', 'CD38', 'CD13', 'DR', 'CD7', 'CD56', 'CD11B', 'HLA-DR', 'CD117'} 
+    ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR',       'HL-DR']3物理+12蛋白
+    这里不小心空白通道DR忘记去掉了，不过正好看看能不能用来说明分析结果的正确性
+
+    第二管数据中的蛋白并集为：
+    {'CD45', 'CD11B', 'CD56', 'CD34', 'SSC-A', 'CD123', 'FSC-A', 'CD117', 'CD13', 'CD56/CD19', 'CD36', 'CD15', 'CD64', 'HL-DR', 'FSC-W', 'CD19+CD56', 'CD19/CD56/CD15', 'CD14', 'DR', 'SSC-H', 'CD7', 'CD16', 'FSC-H', 'CD10', 'CD38', 'CD9', 'CD33', 'HLA-DR', '11b', 'SSC-W'}
+    去掉多种混用的情况后：
+    {'CD45', 'CD11B', 'CD56', 'CD34', 'SSC-A', 'CD123', 'FSC-A', 'CD117', 'CD13', 'CD36', 'CD15', 'CD64', 'HL-DR', 'FSC-W', 'CD14', 'DR', 'SSC-H', 'CD7', 'CD16', 'FSC-H', 'CD10', 'CD38', 'CD9', 'CD33', 'HLA-DR', '11b', 'SSC-W'}
+    去掉极少使用的蛋白后：
+    {'CD45', 'CD11B', 'CD56', 'CD34', 'SSC-A', 'FSC-A', 'CD117', 'CD13', 'HL-DR', 'SSC-H', 'CD7', 'FSC-H', 'CD38', 'CD33', 'HLA-DR', '11b'}
+    排序后：
+    {'FSC-A', 'FSC-H', 'SSC-A', 'CD7', 'CD11B', 'CD13', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'HLA-DR',       'HL-DR', '11b'}，错误的蛋白名称'HL-DR'要纠正为'HLA-DR'，11b->CD11B
 
 ### 数据分析
     荧光的最大值为1023，最小值为0，方便用min-max归一化。

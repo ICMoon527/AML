@@ -188,7 +188,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, choices=['SVM', 'DNN', 'ATTDNN', 'preDN', 'DNNATT', 'UDNN', 'Resume'], default='DNN')
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--batchsize", type=int, default=128)
-    parser.add_argument("--length", type=int, default=1000)
+    parser.add_argument("--length", type=int, default=10000)
     parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else 'cpu', choices=["cpu", "cuda"])
     parser.add_argument('--optimizer', default='Adam', type=str, choices=['SGD','Adam','Adamax'])
@@ -242,7 +242,7 @@ if __name__ == '__main__':
     """
     Choose model
     """
-    input_charac_num = 15 * args.length
+    input_charac_num = 13 * args.length
     nClasses = 2
     model_att = None
     if args.model == 'SVM':

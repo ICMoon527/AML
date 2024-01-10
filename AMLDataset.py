@@ -14,7 +14,7 @@ class AMLDataset(Dataset):
         读取数据, M2-粒细胞-0, M5-单细胞-1
         '''
         object = ReadCSV()
-        X, Y = object.getDataset(length=args.length)
+        X, Y = object.getDataset('Data/UsefulData002', length=args.length)
         X, Y = self.preprocess(X, Y)
         self.MAX = np.max(X)
         
@@ -121,6 +121,7 @@ if __name__ == '__main__':
     parser.add_argument('--nClasses', default=79, type=int)
     parser.add_argument('--input_droprate', default=0., type=float, help='the max rate of the detectors may fail')
     parser.add_argument('--initial_dim', default=2048, type=int)
+    parser.add_argument("--length", type=int, default=10000)
     args = parser.parse_args()
 
     object = AMLDataset(args)
