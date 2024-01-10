@@ -1,4 +1,5 @@
 CUDA_VISIBLE_DEVICES=1,2,3,4,5,6 ~/anaconda3/envs/taizhou/bin/python main.py \
+--dataset Data/UsefulData \
 --model DNN \
 --optimizer Adam \
 --lr 1e-3 \

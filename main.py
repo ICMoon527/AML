@@ -206,6 +206,7 @@ if __name__ == '__main__':
     parser.add_argument('--input_droprate', default=0., type=float, help='the max rate of the detectors may fail')
     parser.add_argument('--initial_dim', default=256, type=int)
     parser.add_argument('--continueFile', default='./Results/79sources/DNN-Adam-0-3000-largerRange-focalLoss/bk.t7', type=str)
+    parser.add_argument('--dataset', default='Data/UsefulData', type=str, choices=['Data/UsefulData','Data/UsefulData002'])
 
     args = parser.parse_args()
 
@@ -242,7 +243,8 @@ if __name__ == '__main__':
     """
     Choose model
     """
-    input_charac_num = 13 * args.length
+    feature_num_dic = {'Data/UsefulData': 15, 'Data/UsefulData002': 13}
+    input_charac_num = feature_num_dic[args.dataset] * args.length
     nClasses = 2
     model_att = None
     if args.model == 'SVM':

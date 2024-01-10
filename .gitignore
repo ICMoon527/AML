@@ -2,6 +2,8 @@ __pycache__/
 Data/
 Doc/
 Results/
+Results002/
 *.t7
 *.csv
 *.txt
+*.png

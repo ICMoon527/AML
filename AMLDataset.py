@@ -14,11 +14,11 @@ class AMLDataset(Dataset):
         读取数据, M2-粒细胞-0, M5-单细胞-1
         '''
         object = ReadCSV()
-        X, Y = object.getDataset('Data/UsefulData002', length=args.length)
+        X, Y = object.getDataset(args.dataset, length=args.length)
         X, Y = self.preprocess(X, Y)
         self.MAX = np.max(X)
         
-        self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(X, Y, test_size=0.2, shuffle=True, random_state=np.random.seed(1234))
+        self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(X, Y, test_size=0.2, shuffle=False, random_state=np.random.seed(1234))
         print('训练集长度: {}, 测试集长度: {}'.format(len(self.X_train), len(self.X_test)))
         
         if isTrain:
