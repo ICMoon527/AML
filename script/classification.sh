@@ -11,9 +11,8 @@ CUDA_VISIBLE_DEVICES=1,2,3,4,5,6 ~/anaconda3/envs/taizhou/bin/python main.py \
 --epochs 200 \
 --device cuda \
 --nonlin elu \
---save_dir ./Results002/DNN \
+--save_dir ./Results/DNN \
 --weight_decay 0. \
---dropout_rate 0. \
+--dropout_rate 0.5 \
 --input_droprate 0. \
--deterministic \
--batchnorm
+-deterministic
