@@ -4,6 +4,7 @@ import numpy as np
 from xpinyin import Pinyin
 import os
 import shutil
+import SomeUtils
 if __name__ == '__main__':
     import logger
 else:
@@ -224,7 +225,7 @@ class ReadCSV():  # 2285 * 15
                 data_np[-1] = df['HL-DR'].to_numpy()
             elif '11b' in df.columns:  # 处理编辑错误的情况
                 data_np[4] = df['11b'].to_numpy()
-        else:
+        else:  # 第一管数据
             if 'HL-DR' in df.columns:  # 处理编辑错误的情况
                 data_np[-1] = df['HL-DR'].to_numpy()
             # 处理多种混用的情况
@@ -250,7 +251,7 @@ class ReadCSV():  # 2285 * 15
         return data_np
     
     def readUseful(self, path):
-        useful_items = ['FSC-A', 'FSC-H', 'SSC-A', 'CD7', 'CD11B', 'CD13', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'HLA-DR',      'HL-DR', '11b']
+        useful_items = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'HLA-DR',       'HL-DR', '11b']  # 002
         
         for root, dirs, files in os.walk(path):
             for file in files:
@@ -288,17 +289,23 @@ class ReadCSV():  # 2285 * 15
     def getDataset(self, path, length=10000):
         length = int(length)
         X, Y = list(), list()
-        # useful_items = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR',      'HL-DR']  # 16
+        # useful_items = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR',      'HL-DR']  # 001
+        # useful_items = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'HLA-DR',       'HL-DR', '11b']        # 002
 
         for root, dirs, files in os.walk(path):
             for file in files:
                 if 'npy' in file:
                     numpy_data = np.load(os.path.join(root, file))
+                    # print(numpy_data.T[0:5, :])
                     
                     # 归一化
                     numpy_data[numpy_data<0] = 0.
                     numpy_data[numpy_data>1023] = 1023.
                     # numpy_data = numpy_data/1023.
+
+                    # 去除SSC-A为纵坐标的离群点
+                    numpy_data = SomeUtils.findAnomaliesBySSC_A(numpy_data)
+
                     # 舍去长度小于 length 的数据
                     if numpy_data.shape[1] < length:
                         continue
@@ -312,7 +319,7 @@ class ReadCSV():  # 2285 * 15
                                 Y.append(1)
                             else:
                                 print('ERROR')
-                                exit()               
+                                exit()
 
         return np.array(X), np.array(Y)
 
@@ -324,6 +331,6 @@ print('病人类别字典: ', dic)
 if __name__ == '__main__':
     # object.findSameProteinAndSaveFile('Data/ExtractedCSV')
     # object.findSameProteinAndSaveFile('Data/PickedCSV')
-    object.readUseful(object.useful_data_folder+'002')
-    # X, Y = object.getDataset()
+    # object.readUseful(object.useful_data_folder+'002')
+    X, Y = object.getDataset('Data/UsefulData')
     # print(X.shape, Y.shape, np.count_nonzero(Y==0), X.max())

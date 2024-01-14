@@ -1,6 +1,7 @@
 import math
 import os
 from traceback import print_last
+import numpy as np
 
 def get_hms(seconds):
     m, s = divmod(seconds, 60)
@@ -53,6 +54,36 @@ def draw_fig(args, data_list, name):
 def try_make_dir(d):
     if not os.path.exists(d):
         os.makedirs(d)
+
+def drawAnomaliesBySSC_A(points_2D, lower_limit, upper_limit):
+    import plotly.express as px
+    color = points_2D.T[:,0].copy()
+    
+    color[(lower_limit<color)*(color<upper_limit)] = 0
+    color[upper_limit<points_2D.T[:,0]] = 1
+    color[points_2D.T[:,0]<lower_limit] = 1
+    
+    fig = px.scatter(x=[x+1 for x in range(points_2D.shape[1])], y=points_2D.T[:,0], color=color, title='Scatter Plot with Color Gradient')
+    fig.show()
+    return 0
+
+def findAnomaliesBySSC_A(points_array, cut_off=2):  # 'SSC-A', 'FSC-A', 'FSC-H'  (15, 500000)
+    new_array = []
+    discard_array = []
+    std = np.std(points_array, 1)[0]
+    mean = np.mean(points_array, 1)[0]
+    cut_off *= std
+    lower_limit = mean-cut_off
+    upper_limit = mean+cut_off
+
+    for item in points_array.T:
+        if lower_limit<item[0]<upper_limit:
+            new_array.append(item)
+        else:
+            discard_array.append(item)
+
+    # drawAnomaliesBySSC_A(points_array, lower_limit, upper_limit)
+    return np.array(new_array).T
 
 if __name__ == '__main__':
     # import numpy as np
