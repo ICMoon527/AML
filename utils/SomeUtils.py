@@ -85,6 +85,47 @@ def findAnomaliesBySSC_A(points_array, cut_off=2):  # 'SSC-A', 'FSC-A', 'FSC-H' 
     # drawAnomaliesBySSC_A(points_array, lower_limit, upper_limit)
     return np.array(new_array).T
 
+def drawAnomaliesByFSC_AH(points_2D, lower_limit, upper_limit):
+    import plotly.express as px
+    slopes = points_2D[2, :] / points_2D[1, :]
+    color = slopes.copy()
+    
+    color[(lower_limit<color)*(color<upper_limit)] = 0
+    color[upper_limit<slopes] = 1
+    color[slopes<lower_limit] = 1
+    
+    fig = px.scatter(x=points_2D[1, :], y=points_2D[2, :], color=color, title='Scatter Plot with Color Gradient')
+    fig.show()
+    return 0
+
+def findAnomaliesByFSC_AH(points_array, cut_off=1):  # 'SSC-A', 'FSC-A', 'FSC-H'  (15, 500000)
+    new_array = []
+    discard_array = []
+
+    # 求斜率数组，以FSC-A为x轴，FSC-H为y轴
+    slope_array = points_array[2, :] / points_array[1, :]
+
+    std = np.std(slope_array)
+    mean = np.mean(slope_array)
+    cut_off *= std
+    lower_limit = mean-cut_off
+    upper_limit = np.inf
+
+    for i, item in enumerate(slope_array):
+        if lower_limit<item<upper_limit:
+            new_array.append(points_array.T[i, :])
+        else:
+            discard_array.append(points_array.T[i, :])
+
+    # drawAnomaliesByFSC_AH(points_array, lower_limit, upper_limit)
+    return np.array(new_array).T
+
+def drawPoints(points):
+    import plotly.express as px
+    fig = px.scatter(x=points[1, :], y=points[2, :], title='Scatter Plot with Color Gradient')
+    fig.show()
+    return 0
+
 if __name__ == '__main__':
     # import numpy as np
     # a = np.ones((2, 4))*10.

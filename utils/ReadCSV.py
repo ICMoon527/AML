@@ -4,11 +4,13 @@ import numpy as np
 from xpinyin import Pinyin
 import os
 import shutil
-import SomeUtils
+
 if __name__ == '__main__':
     import logger
+    import SomeUtils
 else:
     from utils import logger
+    from utils import SomeUtils
 import json
 
 dic = {}
@@ -305,6 +307,20 @@ class ReadCSV():  # 2285 * 15
 
                     # 去除SSC-A为纵坐标的离群点
                     numpy_data = SomeUtils.findAnomaliesBySSC_A(numpy_data)
+                    # 去除以FSC-A为x轴，FSC-H为y轴的离群点
+                    numpy_data = SomeUtils.findAnomaliesByFSC_AH(numpy_data)
+                    # 去除FSC-A为60-600以外的点
+                    numpy_data = numpy_data.T
+                    i = 0
+                    while i < len(numpy_data):
+                        if 600 >= numpy_data[i, 1] >= 60:
+                            pass
+                        else:
+                            numpy_data = np.delete(numpy_data, i, 0)
+                            i -= 1
+                        i += 1
+                    numpy_data = numpy_data.T
+                    # SomeUtils.drawPoints(numpy_data)
 
                     # 舍去长度小于 length 的数据
                     if numpy_data.shape[1] < length:
