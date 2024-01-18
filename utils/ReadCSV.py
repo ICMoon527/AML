@@ -288,7 +288,12 @@ class ReadCSV():  # 2285 * 15
         return 0
 
 
-    def getDataset(self, path, length=10000):
+    def getDataset(self, path, length=10000, readNpz=True):
+        if readNpz:
+            data = np.load('Data/npyData/proceededData.npz')
+            X, Y = data['X'], data['Y']
+            return np.array(X), np.array(Y)
+
         length = int(length)
         X, Y = list(), list()
         # useful_items = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR',      'HL-DR']  # 001
@@ -297,6 +302,7 @@ class ReadCSV():  # 2285 * 15
         for root, dirs, files in os.walk(path):
             for file in files:
                 if 'npy' in file:
+                    print('Proceeding {}...'.format(file))
                     numpy_data = np.load(os.path.join(root, file))
                     # print(numpy_data.T[0:5, :])
                     
@@ -306,14 +312,18 @@ class ReadCSV():  # 2285 * 15
                     # numpy_data = numpy_data/1023.
 
                     # 去除SSC-A为纵坐标的离群点
+                    print('Discard points by SSC-A')
                     numpy_data = SomeUtils.findAnomaliesBySSC_A(numpy_data)
                     # 去除以FSC-A为x轴，FSC-H为y轴的离群点
+                    print('Discard points by FSC-A & FSC-H')
                     numpy_data = SomeUtils.findAnomaliesByFSC_AH(numpy_data)
                     # 去除FSC-A为60-600以外的点
+                    lower, upper = 60, 600
+                    print('Manually exclude data outside of [{}, {}]'.format(lower, upper))
                     numpy_data = numpy_data.T
                     i = 0
                     while i < len(numpy_data):
-                        if 600 >= numpy_data[i, 1] >= 60:
+                        if upper >= numpy_data[i, 1] >= lower:
                             pass
                         else:
                             numpy_data = np.delete(numpy_data, i, 0)
@@ -336,6 +346,9 @@ class ReadCSV():  # 2285 * 15
                             else:
                                 print('ERROR')
                                 exit()
+        
+        # 保存一下根据医学知识预处理过的数据
+        np.savez('Data/npyData/proceededData.npz', X=np.array(X), Y=np.array(Y))
 
         return np.array(X), np.array(Y)
 

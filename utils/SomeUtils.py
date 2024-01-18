@@ -87,7 +87,7 @@ def findAnomaliesBySSC_A(points_array, cut_off=2):  # 'SSC-A', 'FSC-A', 'FSC-H' 
 
 def drawAnomaliesByFSC_AH(points_2D, lower_limit, upper_limit):
     import plotly.express as px
-    slopes = points_2D[2, :] / points_2D[1, :]
+    slopes = points_2D[2, :] / (points_2D[1, :]+0.001)
     color = slopes.copy()
     
     color[(lower_limit<color)*(color<upper_limit)] = 0
@@ -103,7 +103,7 @@ def findAnomaliesByFSC_AH(points_array, cut_off=1):  # 'SSC-A', 'FSC-A', 'FSC-H'
     discard_array = []
 
     # 求斜率数组，以FSC-A为x轴，FSC-H为y轴
-    slope_array = points_array[2, :] / points_array[1, :]
+    slope_array = points_array[2, :] / (points_array[1, :]+0.001)
 
     std = np.std(slope_array)
     mean = np.mean(slope_array)

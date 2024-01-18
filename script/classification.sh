@@ -1,4 +1,5 @@
 CUDA_VISIBLE_DEVICES=1,2,3,4,5,6 ~/anaconda3/envs/taizhou/bin/python main.py \
+-train \
 --dataset Data/UsefulData \
 --model DNN \
 --optimizer Adam \
@@ -6,14 +7,14 @@ CUDA_VISIBLE_DEVICES=1,2,3,4,5,6 ~/anaconda3/envs/taizhou/bin/python main.py \
 --warmup_steps 10 \
 --warmup_start_lr 1e-5 \
 --power 0.5 \
---batchsize 128 \
+--batchsize 64 \
 --length 10000 \
 --epochs 200 \
 --device cuda \
 --nonlin elu \
 --save_dir ./Results/DNN \
 --weight_decay 0. \
---dropout_rate 0. \
+--dropout_rate 0.5 \
 --input_droprate 0. \
--deterministic \
--batchnorm
+--test_model_path Results/DNN-notShuffle-dropout0d5/DNN_Adam_98.23_checkpoint.t7 \
+-deterministic

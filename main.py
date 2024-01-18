@@ -12,7 +12,7 @@ import torch.backends.cudnn as cudnn
 import torch.optim as optim
 from utils.logger import setup_logger
 import time
-from utils import SomeUtils
+from utils import SomeUtils, FocalLoss
 import numpy as np
 from torch.autograd import Variable
 import torch.nn as nn
@@ -39,8 +39,8 @@ import torch.nn as nn
 # if torch.cuda.is_available():
 #     class_weights = class_weights.cuda()
 
-criterion = nn.CrossEntropyLoss()
-# criterion = FocalLossV1()
+# criterion = nn.CrossEntropyLoss()
+criterion = FocalLoss.FocalLossV1()
 lr_list = []
 
 def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_att=None):
@@ -66,6 +66,9 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
     logger.info('\n=> Training Epoch #%d, LR=%.8f' % (epoch, lr))
 
     for batch_idx, (inputs, targets, _) in enumerate(trainloader):
+        # 处理batch内只有一个样本的异常情况，无法通过batchnorm
+        if inputs.size()[0] == 1:
+            continue
 
         if args.device == torch.device('cuda'):
             inputs, targets = inputs.cuda(), targets.cuda()  # GPU settings
@@ -207,6 +210,9 @@ if __name__ == '__main__':
     parser.add_argument('--initial_dim', default=256, type=int)
     parser.add_argument('--continueFile', default='./Results/79sources/DNN-Adam-0-3000-largerRange-focalLoss/bk.t7', type=str)
     parser.add_argument('--dataset', default='Data/UsefulData', type=str, choices=['Data/UsefulData','Data/UsefulData002'])
+    parser.add_argument('-train', '--train', action='store_true')
+    parser.add_argument('--test_model_path', default='Results/DNN-notShuffle-dropout0d5/DNN_Adam_98.23_checkpoint.t7', type=str)
+
 
     args = parser.parse_args()
 
@@ -223,10 +229,10 @@ if __name__ == '__main__':
     # 检索当前条件下结果最佳的模型
     best_result = -np.inf
     files = os.listdir(args.save_dir)
-    for file in files:
-        if args.model+'_' in file and args.optimizer+'_' in file and 't7' in file:
-            best_result = float(file.split('_')[-2]) if float(file.split('_')[-2]) > best_result else best_result
-    print('\033[31mBest Result Before: {}\033[0m'.format(best_result))
+    # for file in files:
+    #     if args.model+'_' in file and args.optimizer+'_' in file and 't7' in file:
+    #         best_result = float(file.split('_')[-2]) if float(file.split('_')[-2]) > best_result else best_result
+    # print('\033[31mBest Result Before: {}\033[0m'.format(best_result))
 
     """
     Read Data
@@ -272,6 +278,11 @@ if __name__ == '__main__':
         file = torch.load(args.continueFile)
         model, epoch, accuracy, optimizer = file['model'], file['epoch'], file['accuracy'], file['optimizer']
 
+    if not args.train:
+        # 单独测试
+        file = torch.load(args.test_model_path)
+        model, epoch, accuracy, optimizer = file['model'], file['epoch'], file['accuracy'], file['optimizer']
+
     model.to(args.device)
     if args.model == 'preDN':
         model_att.to(args.device)
@@ -296,6 +307,7 @@ if __name__ == '__main__':
     if args.model == 'Resume':
         optimizer.load_state_dict(file['optimizer'])
 
+
 ###############################################################################################
     """
     TRAIN
@@ -303,6 +315,10 @@ if __name__ == '__main__':
     # set up a logger
     logger = setup_logger(args.model+'_'+args.optimizer, args.save_dir, 0, args.model+'_'+args.optimizer+'_log.txt', mode='w+')
     logger.info(args)
+
+    if not args.train:
+        new_best = test(best_result, args, model, epoch, testloader, logger, model_att)
+        exit()
 
     if args.model == 'preDN':
         logger.info('pretrained model {}_checkpoint.t7 is loaded'.format(recover_result))

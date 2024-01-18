@@ -52,9 +52,9 @@ class DNN(nn.Module):
             )
         else:
             return nn.Sequential(
-                nn.Dropout(p=self.args.dropout_rate, inplace=False),
                 nn.Linear(input_dim, output_dim),
-                self.activate()
+                self.activate(),
+                nn.Dropout(p=self.args.dropout_rate, inplace=False)  # 激活函数之后
             )
 
 
