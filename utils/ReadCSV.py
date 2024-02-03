@@ -133,7 +133,7 @@ class ReadCSV():  # 2285 * 15
 
                             self.merge_protein_1 = self.merge_protein_1 | file_protein
                             self.intersection_protein_1 = self.intersection_protein_1 & file_protein
-                            # m2_logger.info('File: {} (type 001), has {} public proteins according to all the 001 files.\nThey are {}\n'.format(file, len(self.merge_protein_1 & file_protein), self.merge_protein_1 & file_protein))
+                            m2_logger.info('File: {} (type 001), has {} public proteins according to all the 001 files.\nThey are {}\n'.format(file, len(self.merge_protein_1 & file_protein), self.merge_protein_1 & file_protein))
                             # if not os.path.exists(os.path.join(self.useful_data_folder, file)):
                             #     shutil.copy(os.path.join(root, file), os.path.join(self.useful_data_folder, file))
                         elif '002' in file:
@@ -143,9 +143,9 @@ class ReadCSV():  # 2285 * 15
 
                             self.merge_protein_2 = self.merge_protein_2 | file_protein
                             self.intersection_protein_2 = self.intersection_protein_2 & file_protein
-                            m2_logger.info('File: {} (type 002), has {} public proteins according to all the 002 files.\nThey are {}\n'.format(file, len(self.merge_protein_2 & file_protein), self.merge_protein_2 & file_protein))
-                            if not os.path.exists(os.path.join(self.useful_data_folder+'002', file)):
-                                shutil.copy(os.path.join(root, file), os.path.join(self.useful_data_folder+'002', file))
+                            # m2_logger.info('File: {} (type 002), has {} public proteins according to all the 002 files.\nThey are {}\n'.format(file, len(self.merge_protein_2 & file_protein), self.merge_protein_2 & file_protein))
+                            # if not os.path.exists(os.path.join(self.useful_data_folder+'002', file)):
+                            #     shutil.copy(os.path.join(root, file), os.path.join(self.useful_data_folder+'002', file))
                         elif '003' in file:
                             self.file_count_3 += 1
                             if 'M2' in file:
@@ -153,6 +153,9 @@ class ReadCSV():  # 2285 * 15
 
                             self.merge_protein_3 = self.merge_protein_3 | file_protein
                             self.intersection_protein_3 = self.intersection_protein_3 & file_protein
+                            # m2_logger.info('File: {} (type 003), has {} public proteins according to all the 003 files.\nThey are {}\n'.format(file, len(self.merge_protein_3 & file_protein), self.merge_protein_3 & file_protein))
+                            # if not os.path.exists(os.path.join(self.useful_data_folder+'003', file)):
+                            #     shutil.copy(os.path.join(root, file), os.path.join(self.useful_data_folder+'003', file))
                         elif '004' in file:
                             self.file_count_4 += 1
                             if 'M2' in file:
@@ -290,7 +293,10 @@ class ReadCSV():  # 2285 * 15
 
     def getDataset(self, path, length=10000, readNpz=True):
         if readNpz:
-            data = np.load('Data/npyData/proceededData.npz')
+            if '002' in path:
+                data = np.load('Data/npyData/proceededData002.npz')
+            else:
+                data = np.load('Data/npyData/proceededData.npz')
             X, Y = data['X'], data['Y']
             return np.array(X), np.array(Y)
 
@@ -348,7 +354,7 @@ class ReadCSV():  # 2285 * 15
                                 exit()
         
         # 保存一下根据医学知识预处理过的数据
-        np.savez('Data/npyData/proceededData.npz', X=np.array(X), Y=np.array(Y))
+        np.savez('Data/npyData/proceededData002.npz', X=np.array(X), Y=np.array(Y))
 
         return np.array(X), np.array(Y)
 
@@ -361,5 +367,5 @@ if __name__ == '__main__':
     # object.findSameProteinAndSaveFile('Data/ExtractedCSV')
     # object.findSameProteinAndSaveFile('Data/PickedCSV')
     # object.readUseful(object.useful_data_folder+'002')
-    X, Y = object.getDataset('Data/UsefulData')
+    X, Y = object.getDataset('Data/UsefulData', readNpz=False)
     # print(X.shape, Y.shape, np.count_nonzero(Y==0), X.max())

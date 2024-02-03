@@ -1,4 +1,4 @@
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6 ~/anaconda3/envs/taizhou/bin/python main.py \
+CUDA_VISIBLE_DEVICES=0,6 ~/anaconda3/envs/taizhou/bin/python main.py \
 -train \
 --dataset Data/UsefulData002 \
 --model DNN \
@@ -9,12 +9,12 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6 ~/anaconda3/envs/taizhou/bin/python main.py \
 --power 0.5 \
 --batchsize 64 \
 --length 10000 \
---epochs 10000 \
+--epochs 20000 \
 --device cuda \
 --nonlin elu \
---save_dir ./Results002/DNN \
+--save_dir ./Results002/DNNN \
 --weight_decay 0. \
---dropout_rate 0.5 \
+--dropout_rate 0.2 \
 --input_droprate 0. \
 --test_model_path Results/DNN-notShuffle-dropout0d5/DNN_Adam_98.23_checkpoint.t7 \
 -deterministic

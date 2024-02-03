@@ -40,8 +40,8 @@ import torch.nn as nn
 #     class_weights = class_weights.cuda()
 
 # criterion = nn.CrossEntropyLoss()
-criterion = FocalLoss.FocalLossV1()
-lr_list = []
+criterion = FocalLoss.FocalLossV1()  # To the best results
+lr_list, test_accuracy_list = [], []
 
 def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_att=None):
     model.train()
@@ -95,7 +95,7 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
                                 accuracy,
                                 correct, total))
             
-    if epoch % 10 == 1:
+    if epoch % 1 == 0:
         model.eval()
         correct = 0.
         total = 0
@@ -122,6 +122,7 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
         target_list = np.hstack(target_list)
 
         accuracy = 100. * float(correct) / float(total)
+        test_accuracy_list.append(accuracy)
         logger.info("\n| Validation Epoch #%d\t\t\taccuracy =  %.4f" % (epoch, accuracy))
 
         # 保存模型
@@ -193,7 +194,7 @@ if __name__ == '__main__':
     parser.add_argument("--batchsize", type=int, default=128)
     parser.add_argument("--length", type=int, default=10000)
     parser.add_argument("--epochs", type=int, default=200)
-    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else 'cpu', choices=["cpu", "cuda"])
+    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--optimizer', default='Adam', type=str, choices=['SGD','Adam','Adamax'])
     parser.add_argument('--save_dir', default='./Results/DNN', type=str)
     parser.add_argument('--nonlin', default="elu", type=str, choices=["relu", "elu", "softplus", 'sigmoid'])
@@ -211,7 +212,7 @@ if __name__ == '__main__':
     parser.add_argument('--continueFile', default='./Results/79sources/DNN-Adam-0-3000-largerRange-focalLoss/bk.t7', type=str)
     parser.add_argument('--dataset', default='Data/UsefulData', type=str, choices=['Data/UsefulData','Data/UsefulData002'])
     parser.add_argument('-train', '--train', action='store_true')
-    parser.add_argument('--test_model_path', default='Results/DNN-notShuffle-dropout0d5/DNN_Adam_98.23_checkpoint.t7', type=str)
+    parser.add_argument('--test_model_path', default='Results/DNN-notShuffle-dropout0d4/DNN_Adam_98.23_checkpoint.t7', type=str)
 
 
     args = parser.parse_args()
@@ -240,11 +241,11 @@ if __name__ == '__main__':
     trainset = AMLDataset.AMLDataset(args, True)
     testset = AMLDataset.AMLDataset(args, False)
     if args.deterministic:
-        trainloader = DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=2, worker_init_fn=np.random.seed(1234))
-        testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=False, num_workers=2, worker_init_fn=np.random.seed(1234))
+        trainloader = DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=16, worker_init_fn=np.random.seed(1234))
+        testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=False, num_workers=16, worker_init_fn=np.random.seed(1234))
     else:
-        trainloader = DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=2)
-        testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=False, num_workers=2)
+        trainloader = DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=16)
+        testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=False, num_workers=16)
 
     """
     Choose model
@@ -281,7 +282,7 @@ if __name__ == '__main__':
     if not args.train:
         # 单独测试
         file = torch.load(args.test_model_path)
-        model, epoch, accuracy, optimizer = file['model'], file['epoch'], file['accuracy'], file['optimizer']
+        model, epoch, accuracy = file['model'], file['epoch'], file['accuracy']
 
     model.to(args.device)
     if args.model == 'preDN':
@@ -316,8 +317,9 @@ if __name__ == '__main__':
     logger = setup_logger(args.model+'_'+args.optimizer, args.save_dir, 0, args.model+'_'+args.optimizer+'_log.txt', mode='w+')
     logger.info(args)
 
+    # 单独测试
     if not args.train:
-        new_best = test(best_result, args, model, epoch, testloader, logger, model_att)
+        new_best = test(100, args, model, epoch, testloader, logger, model_att)
         exit()
 
     if args.model == 'preDN':
@@ -354,6 +356,7 @@ if __name__ == '__main__':
     prefix = args.model + '_' + args.optimizer + '_'#  + str(args.lr) + '_'
     if new_best > best_result:  # accuracy
         SomeUtils.draw_fig(args, loss_list, prefix+'Train_Loss')
+        SomeUtils.draw_fig(args, test_accuracy_list, prefix+'Test_Accuracy')
         SomeUtils.draw_fig(args, accuracy_list, prefix+'Train_Accuracy')
     SomeUtils.draw_fig(args, lr_list, prefix+'Learning Rate')
 

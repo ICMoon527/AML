@@ -63,11 +63,11 @@ def drawAnomaliesBySSC_A(points_2D, lower_limit, upper_limit):
     color[upper_limit<points_2D.T[:,0]] = 1
     color[points_2D.T[:,0]<lower_limit] = 1
     
-    fig = px.scatter(x=[x+1 for x in range(points_2D.shape[1])], y=points_2D.T[:,0], color=color, title='Scatter Plot with Color Gradient')
+    fig = px.scatter(x=[x+1 for x in range(points_2D.shape[1])], y=points_2D.T[:,0], color=color, title='Scatter Plot with Color Gradient', labels=dict(x="Time", y="SSC-A"))
     fig.show()
     return 0
 
-def findAnomaliesBySSC_A(points_array, cut_off=2):  # 'SSC-A', 'FSC-A', 'FSC-H'  (15, 500000)
+def findAnomaliesBySSC_A(points_array, cut_off=2, draw_fig=False):  # 'SSC-A', 'FSC-A', 'FSC-H'  (15, 500000)
     new_array = []
     discard_array = []
     std = np.std(points_array, 1)[0]
@@ -82,7 +82,8 @@ def findAnomaliesBySSC_A(points_array, cut_off=2):  # 'SSC-A', 'FSC-A', 'FSC-H' 
         else:
             discard_array.append(item)
 
-    # drawAnomaliesBySSC_A(points_array, lower_limit, upper_limit)
+    if draw_fig:
+        drawAnomaliesBySSC_A(points_array, lower_limit, upper_limit)
     return np.array(new_array).T
 
 def drawAnomaliesByFSC_AH(points_2D, lower_limit, upper_limit):
@@ -94,11 +95,11 @@ def drawAnomaliesByFSC_AH(points_2D, lower_limit, upper_limit):
     color[upper_limit<slopes] = 1
     color[slopes<lower_limit] = 1
     
-    fig = px.scatter(x=points_2D[1, :], y=points_2D[2, :], color=color, title='Scatter Plot with Color Gradient')
+    fig = px.scatter(x=points_2D[1, :], y=points_2D[2, :], color=color, title='Scatter Plot with Color Gradient', labels=dict(x="FSC-A", y="FSC-H"))
     fig.show()
     return 0
 
-def findAnomaliesByFSC_AH(points_array, cut_off=1):  # 'SSC-A', 'FSC-A', 'FSC-H'  (15, 500000)
+def findAnomaliesByFSC_AH(points_array, cut_off=1, draw_fig=False):  # 'SSC-A', 'FSC-A', 'FSC-H'  (15, 500000)
     new_array = []
     discard_array = []
 
@@ -117,12 +118,13 @@ def findAnomaliesByFSC_AH(points_array, cut_off=1):  # 'SSC-A', 'FSC-A', 'FSC-H'
         else:
             discard_array.append(points_array.T[i, :])
 
-    # drawAnomaliesByFSC_AH(points_array, lower_limit, upper_limit)
+    if draw_fig:
+        drawAnomaliesByFSC_AH(points_array, lower_limit, upper_limit)
     return np.array(new_array).T
 
 def drawPoints(points):
     import plotly.express as px
-    fig = px.scatter(x=points[1, :], y=points[2, :], title='Scatter Plot with Color Gradient')
+    fig = px.scatter(x=points[1, :], y=points[2, :], title='Scatter Plot with Color Gradient', labels=dict(x="FSC-A", y="SSC-A"))
     fig.show()
     return 0
 
