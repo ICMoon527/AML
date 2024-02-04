@@ -45,12 +45,6 @@ def test(best_result, args, model, epoch, testloader, logger, model_att=None):
         predicted_list.append(predicted.cpu().numpy())
         target_list.append(targets.cpu().numpy())
         score_list.append(score)
-
-        # # PPSCORE
-        # df = pd.DataFrame()
-        # df["x"] = np.random.uniform(-2, 2, 1_000_000)
-        # df["y"] = df["x"] * df["x"] + df["error"]
-        # pps.matrix(df)
     
     predicted_list = np.hstack(predicted_list)
     target_list = np.hstack(target_list)

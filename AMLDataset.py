@@ -129,6 +129,13 @@ class AMLDataset(Dataset):
         x, y = np.vstack([x_0, x_1]), np.hstack([y_0, y_1])
             
         return x, y
+    
+    def getPPScore(self):
+        # PPSCORE
+        df = pd.DataFrame()
+        df["x"] = np.random.uniform(-2, 2, 1_000_000)
+        df["y"] = df["x"] * df["x"] + df["error"]
+        pps.matrix(df)
 
 if __name__ == '__main__':
     import argparse
