@@ -16,7 +16,7 @@ class AMLDataset(Dataset):
         object = ReadCSV()
         X, Y = object.getDataset(args.dataset, length=args.length)
         X, Y = self.preprocess(X, Y)  # (num, 10000, 15)
-        # self.MAX = np.max(X)
+        self.all_X, self.all_Y = X.reshape((-1, X.shape[-1]))*1023., Y
         
         self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(X, Y, test_size=0.2, shuffle=True, random_state=np.random.seed(1234))
         print('训练集长度: {}, 测试集长度: {}'.format(len(self.X_train), len(self.X_test)))
@@ -131,11 +131,32 @@ class AMLDataset(Dataset):
         return x, y
     
     def getPPScore(self):
+        import ppscore as pps
+        import pandas as pd
+        import seaborn as sns
+
+        # useful_items = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR']
+        useful_items = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'HLA-DR']
         # PPSCORE
         df = pd.DataFrame()
-        df["x"] = np.random.uniform(-2, 2, 1_000_000)
-        df["y"] = df["x"] * df["x"] + df["error"]
-        pps.matrix(df)
+        Y = list()
+        for i in range(len(self.all_X)):
+            if self.all_Y[int(i/10000)] == 1:
+                Y.append('True')
+            else:
+                Y.append('False')
+        for i in range(self.all_X.shape[1]):
+            df[useful_items[i]] = self.all_X[:, i]
+        df["y"] = Y
+
+        predictors_df = pps.predictors(df, y="y")
+        print(predictors_df)
+        # fig = sns.barplot(data=predictors_df, x="x", y="ppscore")
+        # fig.get_figure().savefig('PPSResults/001.png', dpi=400)
+
+        matrix_df = pps.matrix(df)[['x', 'y', 'ppscore']].pivot(columns='x', index='y', values='ppscore')
+        fig = sns.heatmap(matrix_df, vmin=0, vmax=1, cmap="Blues", linewidths=2)
+        fig.get_figure().savefig('PPSResults/002.png', dpi=400)
 
 if __name__ == '__main__':
     import argparse
@@ -162,7 +183,7 @@ if __name__ == '__main__':
     parser.add_argument('--input_droprate', default=0., type=float, help='the max rate of the detectors may fail')
     parser.add_argument('--initial_dim', default=256, type=int)
     parser.add_argument('--continueFile', default='./Results/79sources/DNN-Adam-0-3000-largerRange-focalLoss/bk.t7', type=str)
-    parser.add_argument('--dataset', default='Data/UsefulData', type=str, choices=['Data/UsefulData','Data/UsefulData002'])
+    parser.add_argument('--dataset', default='Data/UsefulData002', type=str, choices=['Data/UsefulData','Data/UsefulData002'])
     parser.add_argument('-train', '--train', action='store_true')
     parser.add_argument('--test_model_path', default='Results/DNN-notShuffle-dropout0d5/DNN_Adam_98.23_checkpoint.t7', type=str)
     args = parser.parse_args()
@@ -170,8 +191,5 @@ if __name__ == '__main__':
     object = AMLDataset(args)
     input, target, _ = object.__getitem__(0)
     print(input.shape)
-    # indices = np.random.choice(np.arange(len(input)), replace=False,
-    #                        size=int(len(input) * 0.2))
-    # input[indices] = 0
-    # print(input)
-    # print(target)
+    
+    object.getPPScore()

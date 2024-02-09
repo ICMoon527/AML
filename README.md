@@ -9,8 +9,6 @@
     6. 考虑到cd19和cd56经常一起用，置0的时候也同时置0作为一个测试
     7. Dropout Layer放在激活层之后  √
     8. data augmentation
-    9. 增加lr看是不是鞍点的原因
-        结果：不是，可能由于dropout rate太大了
     10. 5-fold cross-validation scheme
     11. AUC: https://zhuanlan.zhihu.com/p/81202617
     12. PPS(Predictive Power Score)被提出用来挖掘特征之间的关系。
