@@ -238,8 +238,9 @@ if __name__ == '__main__':
     """
     Read Data
     """
-    trainset = AMLDataset.AMLDataset(args, True)
-    testset = AMLDataset.AMLDataset(args, False)
+    discard_protein_ID_list = [5, 6, 7, 11, 13, 14]
+    trainset = AMLDataset.AMLDataset(args, True, setZeroClassNum=discard_protein_ID_list)
+    testset = AMLDataset.AMLDataset(args, False, setZeroClassNum=discard_protein_ID_list)
     if args.deterministic:
         trainloader = DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=16, worker_init_fn=np.random.seed(1234))
         testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=False, num_workers=16, worker_init_fn=np.random.seed(1234))

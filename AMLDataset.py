@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 class AMLDataset(Dataset):
-    def __init__(self, args, isTrain=True, setZeroClassNum='None') -> None:
+    def __init__(self, args, isTrain=True, setZeroClassNum=None) -> None:
         super(AMLDataset, self).__init__()
         self.args = args
         self.isTrain = isTrain
@@ -16,7 +16,7 @@ class AMLDataset(Dataset):
         object = ReadCSV()
         X, Y = object.getDataset(args.dataset, length=args.length)
         X, Y = self.preprocess(X, Y)  # (num, 10000, 15)
-        self.all_X, self.all_Y = X.reshape((-1, X.shape[-1]))*1023., Y
+        self.all_X, self.all_Y = X.reshape((-1, X.shape[-1])), Y
         
         self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(X, Y, test_size=0.2, shuffle=True, random_state=np.random.seed(1234))
         print('训练集长度: {}, 测试集长度: {}'.format(len(self.X_train), len(self.X_test)))
@@ -39,8 +39,9 @@ class AMLDataset(Dataset):
         # np.random.seed(1234)
         # self.fix_indices = np.random.choice(np.arange(len(self.X[0])), replace=False,
         #                                 size=int(len(self.X[0])*5.1/6.0))
-        if not setZeroClassNum == 'None':
-            self.X[:, :, setZeroClassNum] = 0
+        if setZeroClassNum:
+            for item in setZeroClassNum:
+                self.X[:, :, item] = 0
         np.random.seed(1234)
 
     def __getitem__(self, index):

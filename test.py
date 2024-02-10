@@ -110,9 +110,9 @@ if __name__ == '__main__':
     parser.add_argument('--continueFile', default='./Results/79sources/DNN-Adam-0-3000-largerRange-focalLoss/bk.t7', type=str)
     parser.add_argument('-train', '--train', action='store_true')
     
-    parser.add_argument('--save_dir', default='./Results002/Test', type=str)
-    parser.add_argument('--dataset', default='Data/UsefulData002', type=str, choices=['Data/UsefulData','Data/UsefulData002'])
-    parser.add_argument('--test_model_path', default='Results002/DNN-2timesNet/DNN_Adam_100.0_checkpoint.t7', type=str)
+    parser.add_argument('--save_dir', default='Results/Test', type=str)
+    parser.add_argument('--dataset', default='Data/UsefulData', type=str, choices=['Data/UsefulData','Data/UsefulData002'])
+    parser.add_argument('--test_model_path', default='Results/DNN-1000epochs-withNorm/DNN_Adam_94.93_checkpoint.t7', type=str)
 
     args = parser.parse_args()
 
@@ -122,8 +122,10 @@ if __name__ == '__main__':
     """
     Read Data
     """
-    trainset = AMLDataset.AMLDataset(args, True)
-    testset = AMLDataset.AMLDataset(args, False)
+    # discard_protein_ID_list = [5, 6, 7, 11, 13, 14]
+    discard_protein_ID_list = []
+    trainset = AMLDataset.AMLDataset(args, True, setZeroClassNum=discard_protein_ID_list)
+    testset = AMLDataset.AMLDataset(args, False, setZeroClassNum=discard_protein_ID_list)
     if args.deterministic:
         trainloader = DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=16, worker_init_fn=np.random.seed(1234))
         testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=True, num_workers=16, worker_init_fn=np.random.seed(1234))
@@ -147,7 +149,7 @@ if __name__ == '__main__':
 
 ###############################################################################################
     # set up a logger
-    logger = setup_logger(args.model+'_'+args.optimizer, args.save_dir, 0, args.model+'_'+args.optimizer+'_log.txt', mode='w+')
+    logger = setup_logger(args.model+'_'+args.optimizer, args.save_dir, 0, args.model+'_'+args.optimizer+'_testlog.txt', mode='w+')
     best_result = 100
 
     """
@@ -156,10 +158,22 @@ if __name__ == '__main__':
     logger.info('='*20+'Testing Model'+'='*20)
     new_best = test(best_result, args, model, epoch, testloader, logger, discard_protein_name='All reserved')
 
-    # protein_list = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR']
-    protein_list = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'HLA-DR']
+    # 去掉一个测试对结果的影响
+    protein_list = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR']
+    # protein_list = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'HLA-DR']
     for i in range(len(protein_list)):
-        testset = AMLDataset.AMLDataset(args, False, i)
-        testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=True, num_workers=16, worker_init_fn=np.random.seed(1234))
-        new_best = test(best_result, args, model, epoch, testloader, logger, discard_protein_name=protein_list[i])
+        if i not in discard_protein_ID_list:
+            testset = AMLDataset.AMLDataset(args, False, [i])
+            testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=True, num_workers=16, worker_init_fn=np.random.seed(1234))
+            new_best = test(best_result, args, model, epoch, testloader, logger, discard_protein_name=protein_list[i])
+
+    # 剪除蛋白组
+    # if '002' in args.save_dir:
+    #     pass
+    # else:  # 001
+    #     protein_list = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR']
+    #     discard_protein_ID_list = [5, 6, 7, 11, 13, 14]
+    #     testset = AMLDataset.AMLDataset(args, False, discard_protein_ID_list)
+    #     testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=True, num_workers=16, worker_init_fn=np.random.seed(1234))
+    #     new_best = test(best_result, args, model, epoch, testloader, logger)
 ###############################################################################################
