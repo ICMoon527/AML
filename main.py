@@ -42,6 +42,7 @@ import torch.nn as nn
 # criterion = nn.CrossEntropyLoss()
 criterion = FocalLoss.FocalLossV1()  # To the best results
 lr_list, test_accuracy_list = [], []
+best_acc = -np.inf
 
 def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_att=None):
     model.train()
@@ -121,22 +122,23 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
         predicted_list = np.hstack(predicted_list)
         target_list = np.hstack(target_list)
 
-        accuracy = 100. * float(correct) / float(total)
-        test_accuracy_list.append(accuracy)
-        logger.info("\n| Validation Epoch #%d\t\t\taccuracy =  %.4f" % (epoch, accuracy))
+        test_accuracy = 100. * float(correct) / float(total)
+        test_accuracy_list.append(test_accuracy)
+        logger.info("\n| Validation Epoch #%d\t\t\taccuracy =  %.4f" % (epoch, test_accuracy))
 
         # 保存模型
-        logger.info('\n| Saving model...\t\t\taccuracy = %.4f' % (accuracy))
+        logger.info('\n| Saving better model...\t\t\taccuracy = %.4f' % (test_accuracy))
         state = {
             'model': model.module if isinstance(model, torch.nn.DataParallel) else model,
             'optimizer':optimizer.state_dict(),
-            'accuracy': accuracy,
+            'accuracy': test_accuracy,
             'epoch': epoch,
         }
         
-        prefix = args.model + '_' + args.optimizer + '_temp_'
+        prefix = args.model + '_' + args.optimizer + '_' + str(test_accuracy) + '_'
         # 中途保存防止意外
-        torch.save(state, os.path.join(args.save_dir, prefix+'checkpoint.t7'))
+        if test_accuracy >= best_acc:
+            torch.save(state, os.path.join(args.save_dir, prefix+'checkpoint.t7'))
 
     return loss.detach().item(), accuracy
 
@@ -213,6 +215,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', default='Data/UsefulData', type=str, choices=['Data/UsefulData','Data/UsefulData002'])
     parser.add_argument('-train', '--train', action='store_true')
     parser.add_argument('--test_model_path', default='Results/DNN-notShuffle-dropout0d4/DNN_Adam_98.23_checkpoint.t7', type=str)
+    parser.add_argument('--shuffle', default=True, type=bool)
 
 
     args = parser.parse_args()
@@ -342,7 +345,7 @@ if __name__ == '__main__':
         logger.info('| Elapsed time : %d:%02d:%02d' % (SomeUtils.get_hms(elapsed_time)))
 
         loss_list.append(loss)
-        accuracy_list.append(accuracy)
+        accuracy_list.append(accuracy)  # train accuracy
 
     """
     TEST

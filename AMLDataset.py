@@ -18,7 +18,7 @@ class AMLDataset(Dataset):
         X, Y = self.preprocess(X, Y)  # (num, 10000, 15)
         self.all_X, self.all_Y = X.reshape((-1, X.shape[-1])), Y
         
-        self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(X, Y, test_size=0.2, shuffle=True, random_state=np.random.seed(1234))
+        self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(X, Y, test_size=0.2, shuffle=args.shuffle, random_state=np.random.seed(1234))
         print('训练集长度: {}, 测试集长度: {}'.format(len(self.X_train), len(self.X_test)))
         
         if isTrain:
