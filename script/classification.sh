@@ -12,11 +12,10 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6 ~/anaconda3/envs/taizhou/bin/python main.py \
 --epochs 200 \
 --device cuda \
 --nonlin elu \
---save_dir ./Results/DiscardedBatchnorm \
+--save_dir ./Results/DiscardedNotShuffled0.05Drop \
 --weight_decay 0. \
---dropout_rate 0. \
+--dropout_rate 0.05 \
 --input_droprate 0. \
 --test_model_path Results/DNN-notShuffle-dropout0d5/DNN_Adam_98.23_checkpoint.t7 \
 -deterministic \
---shuffle True \
 -batchnorm

@@ -42,13 +42,14 @@ import torch.nn as nn
 # criterion = nn.CrossEntropyLoss()
 criterion = FocalLoss.FocalLossV1()  # To the best results
 lr_list, test_accuracy_list = [], []
-best_acc = -np.inf
+best_acc = 0
 
 def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_att=None):
     model.train()
     total = 0
     correct = 0
     accuracy = 0
+    global best_acc
 
     # update lr for this epoch
     # lr = SomeUtils.learning_rate(args.lr, epoch)  # 0.000005
@@ -138,6 +139,13 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
         prefix = args.model + '_' + args.optimizer + '_' + str(test_accuracy) + '_'
         # 中途保存防止意外
         if test_accuracy >= best_acc:
+            best_acc = test_accuracy
+            # 删掉之前的
+            for root, dirs, files in os.walk(args.save_dir):
+                for file in files:
+                    if '.t7' in file:
+                        os.remove(os.path.join(root, file))
+
             torch.save(state, os.path.join(args.save_dir, prefix+'checkpoint.t7'))
 
     return loss.detach().item(), accuracy
@@ -215,7 +223,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', default='Data/UsefulData', type=str, choices=['Data/UsefulData','Data/UsefulData002'])
     parser.add_argument('-train', '--train', action='store_true')
     parser.add_argument('--test_model_path', default='Results/DNN-notShuffle-dropout0d4/DNN_Adam_98.23_checkpoint.t7', type=str)
-    parser.add_argument('--shuffle', default=True, type=bool)
+    parser.add_argument('-shuffle', '--shuffle', action='store_true')
 
 
     args = parser.parse_args()
