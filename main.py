@@ -249,7 +249,8 @@ if __name__ == '__main__':
     """
     Read Data
     """
-    discard_protein_ID_list = [5, 6, 7, 11, 13, 14]
+    # discard_protein_ID_list = [5, 6, 7, 11, 13, 14]
+    discard_protein_ID_list = [5, 6, 10, 12]
     trainset = AMLDataset.AMLDataset(args, True, setZeroClassNum=discard_protein_ID_list)
     testset = AMLDataset.AMLDataset(args, False, setZeroClassNum=discard_protein_ID_list)
     if args.deterministic:
