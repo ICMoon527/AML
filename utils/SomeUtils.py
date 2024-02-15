@@ -58,13 +58,19 @@ def try_make_dir(d):
 def drawAnomaliesBySSC_A(points_2D, lower_limit, upper_limit):
     import plotly.express as px
     color = points_2D.T[:,0].copy()
+    color_str = points_2D.T[:,0].copy().astype('str')
     
-    color[(lower_limit<color)*(color<upper_limit)] = 0
-    color[upper_limit<points_2D.T[:,0]] = 1
-    color[points_2D.T[:,0]<lower_limit] = 1
+    color_str[(lower_limit<color)*(color<upper_limit)] = 'rgb(0, 0, 255)'
+    color_str[upper_limit<points_2D.T[:,0]] = 'rgb(255, 0, 0)'
+    color_str[points_2D.T[:,0]<lower_limit] = 'rgb(255, 0, 0)'
     
-    fig = px.scatter(x=[x+1 for x in range(points_2D.shape[1])], y=points_2D.T[:,0], color=color, title='Scatter Plot with Color Gradient', labels=dict(x="Time", y="SSC-A"))
-    fig.show()
+    fig = px.scatter(x=[x+1 for x in range(points_2D.shape[1])], y=points_2D.T[:,0], title='Scatter Plot with Color Gradient', labels=dict(x="Time", y="SSC-A"))
+    fig.update_xaxes(title={'font':{'size': 30}})
+    fig.update_yaxes(title={'font':{'size': 30}})
+    fig.update_traces(marker=dict(color=color_str))
+    fig.update_layout(xaxis=dict(tickfont={'size': 25}), yaxis=dict(tickfont={'size': 16}))
+    fig.write_image('/home/ljw/Code/AML/PreprocessResults/SSC_A.png')
+    # fig.show()
     return 0
 
 def findAnomaliesBySSC_A(points_array, cut_off=2, draw_fig=False):  # 'SSC-A', 'FSC-A', 'FSC-H'  (15, 500000)
@@ -90,13 +96,19 @@ def drawAnomaliesByFSC_AH(points_2D, lower_limit, upper_limit):
     import plotly.express as px
     slopes = points_2D[2, :] / (points_2D[1, :]+0.001)
     color = slopes.copy()
+    color_str = points_2D.T[:,0].copy().astype('str')
     
-    color[(lower_limit<color)*(color<upper_limit)] = 0
-    color[upper_limit<slopes] = 1
-    color[slopes<lower_limit] = 1
+    color_str[(lower_limit<color)*(color<upper_limit)] = 'rgb(0, 0, 255)'
+    color_str[upper_limit<slopes] = 'rgb(255, 0, 0)'
+    color_str[slopes<lower_limit] = 'rgb(255, 0, 0)'
     
-    fig = px.scatter(x=points_2D[1, :], y=points_2D[2, :], color=color, title='Scatter Plot with Color Gradient', labels=dict(x="FSC-A", y="FSC-H"))
-    fig.show()
+    fig = px.scatter(x=points_2D[1, :], y=points_2D[2, :], title='Scatter Plot with Color Gradient', labels=dict(x="FSC-A", y="FSC-H"))
+    fig.update_xaxes(title={'font':{'size': 30}})
+    fig.update_yaxes(title={'font':{'size': 30}})
+    fig.update_traces(marker=dict(color=color_str))
+    fig.update_layout(xaxis=dict(tickfont={'size': 25}), yaxis=dict(tickfont={'size': 16}))
+    fig.write_image('/home/ljw/Code/AML/PreprocessResults/FSC.png')
+    # fig.show()
     return 0
 
 def findAnomaliesByFSC_AH(points_array, cut_off=1, draw_fig=False):  # 'SSC-A', 'FSC-A', 'FSC-H'  (15, 500000)
@@ -122,9 +134,21 @@ def findAnomaliesByFSC_AH(points_array, cut_off=1, draw_fig=False):  # 'SSC-A', 
         drawAnomaliesByFSC_AH(points_array, lower_limit, upper_limit)
     return np.array(new_array).T
 
-def drawPoints(points):
+def drawPoints(points, lower_limit, upper_limit):
     import plotly.express as px
-    fig = px.scatter(x=points[1, :], y=points[2, :], title='Scatter Plot with Color Gradient', labels=dict(x="FSC-A", y="SSC-A"))
+    color = points.T[:, 1].copy()
+    color_str = points.T[:, 1].copy().astype('str')
+    
+    color_str[(lower_limit<color)*(color<upper_limit)] = 'rgb(0, 0, 255)'
+    color_str[upper_limit<=points.T[:, 1]] = 'rgb(255, 0, 0)'
+    color_str[points.T[:, 1]<=lower_limit] = 'rgb(255, 0, 0)'
+
+    fig = px.scatter(x=points.T[:, 1], y=points.T[:, 2], title='Scatter Plot with Color Gradient', labels=dict(x="FSC-A", y="SSC-A"))
+    fig.update_xaxes(title={'font':{'size': 30}})
+    fig.update_yaxes(title={'font':{'size': 30}})
+    fig.update_layout(xaxis=dict(tickfont={'size': 25}), yaxis=dict(tickfont={'size': 16}))
+    fig.update_traces(marker=dict(color=color_str))
+    fig.write_image('/home/ljw/Code/AML/PreprocessResults/SFSC.png')
     fig.show()
     return 0
 

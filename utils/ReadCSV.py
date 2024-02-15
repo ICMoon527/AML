@@ -233,6 +233,8 @@ class ReadCSV():  # 2285 * 15
         else:  # 第一管数据
             if 'HL-DR' in df.columns:  # 处理编辑错误的情况
                 data_np[-1] = df['HL-DR'].to_numpy()
+            # elif 'DR' in df.columns:
+            #     data_np[-1] = df['DR'].to_numpy()
             # 处理多种混用的情况
             elif 'CD19/CD56' in df.columns:
                 data_np[6] = df['CD19/CD56'].to_numpy()
@@ -319,13 +321,14 @@ class ReadCSV():  # 2285 * 15
 
                     # 去除SSC-A为纵坐标的离群点
                     print('Discard points by SSC-A')
-                    numpy_data = SomeUtils.findAnomaliesBySSC_A(numpy_data)
+                    numpy_data = SomeUtils.findAnomaliesBySSC_A(numpy_data, draw_fig=True)
                     # 去除以FSC-A为x轴，FSC-H为y轴的离群点
                     print('Discard points by FSC-A & FSC-H')
-                    numpy_data = SomeUtils.findAnomaliesByFSC_AH(numpy_data)
+                    numpy_data = SomeUtils.findAnomaliesByFSC_AH(numpy_data, draw_fig=True)
                     # 去除FSC-A为60-600以外的点
                     lower, upper = 60, 600
                     print('Manually exclude data outside of [{}, {}]'.format(lower, upper))
+                    numpy_data_copy = numpy_data.copy()
                     numpy_data = numpy_data.T
                     i = 0
                     while i < len(numpy_data):
@@ -336,7 +339,7 @@ class ReadCSV():  # 2285 * 15
                             i -= 1
                         i += 1
                     numpy_data = numpy_data.T
-                    # SomeUtils.drawPoints(numpy_data)
+                    SomeUtils.drawPoints(numpy_data_copy, lower, upper)
 
                     # 舍去长度小于 length 的数据
                     if numpy_data.shape[1] < length:
@@ -365,7 +368,7 @@ print('病人类别字典: ', dic)
 
 if __name__ == '__main__':
     # object.findSameProteinAndSaveFile('Data/ExtractedCSV')
-    # object.findSameProteinAndSaveFile('Data/PickedCSV')
+    # object.findSameProteinAndSaveFile('Data/ExtractedCSV')
     # object.readUseful(object.useful_data_folder+'002')
     X, Y = object.getDataset('Data/UsefulData', readNpz=False)
     # print(X.shape, Y.shape, np.count_nonzero(Y==0), X.max())
