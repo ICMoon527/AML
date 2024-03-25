@@ -20,7 +20,7 @@ import pandas as pd
 import ppscore as pps
 
 
-def test(best_result, args, model, epoch, testloader, logger, model_att=None, discard_protein_name=None):
+def test(best_result, args, model, epoch, testloader, logger, model_att=None, discard_protein_name=None, color_num=-1):
     model.eval()
     correct = 0.
     total = 0
@@ -58,7 +58,8 @@ def test(best_result, args, model, epoch, testloader, logger, model_att=None, di
     logger.info('AUC: {}'.format(auc))
 
     from matplotlib import pyplot as plt
-    plt.plot(fpr, tpr, label=discard_protein_name)
+    colors = ['pink', 'grey', 'rosybrown', 'red', 'chocolate', 'tan', 'orange', 'lawngreen', 'darkgreen', 'aquamarine', 'dodgerblue', 'blue', 'darkviolet', 'magenta', 'brown', 'black']
+    plt.plot(fpr, tpr, label=discard_protein_name, color=colors[color_num])
     plt.legend()
     plt.xlabel("FPR")
     plt.ylabel("TPR")
@@ -83,7 +84,7 @@ def test(best_result, args, model, epoch, testloader, logger, model_att=None, di
     else:
         logger.info('\n| Not best... {:.4f} < {:.4f}'.format(accuracy, best_result))
 
-    return best_result
+    return accuracy, auc
 
 
 if __name__ == '__main__':
@@ -109,6 +110,7 @@ if __name__ == '__main__':
     parser.add_argument('--initial_dim', default=256, type=int)
     parser.add_argument('--continueFile', default='./Results/79sources/DNN-Adam-0-3000-largerRange-focalLoss/bk.t7', type=str)
     parser.add_argument('-train', '--train', action='store_true')
+    parser.add_argument('-shuffle', '--shuffle', action='store_true')
     
     parser.add_argument('--save_dir', default='Results/Test', type=str)
     parser.add_argument('--dataset', default='Data/UsefulData', type=str, choices=['Data/UsefulData','Data/UsefulData002'])
@@ -118,6 +120,7 @@ if __name__ == '__main__':
 
     SomeUtils.try_make_dir(args.save_dir)
     args.device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
+    args.shuffle = True
 
     """
     Read Data
@@ -159,13 +162,26 @@ if __name__ == '__main__':
     new_best = test(best_result, args, model, epoch, testloader, logger, discard_protein_name='All reserved')
 
     # 去掉一个测试对结果的影响
+    ablation_dic = dict()
     protein_list = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR']
     # protein_list = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'HLA-DR']
     for i in range(len(protein_list)):
+        if protein_list[i] in 'DR':
+            continue
         if i not in discard_protein_ID_list:
-            testset = AMLDataset.AMLDataset(args, False, [i])
+            if i == 14:
+                testset = AMLDataset.AMLDataset(args, False, [i-1, i])
+            else:
+                testset = AMLDataset.AMLDataset(args, False, [i])
             testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=True, num_workers=16, worker_init_fn=np.random.seed(1234))
-            new_best = test(best_result, args, model, epoch, testloader, logger, discard_protein_name=protein_list[i])
+            new_best, auc = test(best_result, args, model, epoch, testloader, logger, discard_protein_name=protein_list[i], color_num=i)
+            ablation_dic[protein_list[i]] = [new_best, auc]
+    print(ablation_dic)
+
+    ablation_dic_001 = {'SSC-A': [62.83185840707964, 0.8620053655264923], 'FSC-A': [80.53097345132744, 0.9057679409792085], 'FSC-H': [60.176991150442475, 0.9076123407109322], 'CD7': [62.83185840707964, 0.8253688799463448], 'CD11B': [78.76106194690266, 0.9618544600938967], 'CD13': [82.30088495575221, 0.9858316566063046], 'CD19': [81.85840707964601, 0.9936284372904092], 'CD33': [81.85840707964601, 0.9891851106639838], 'CD34': [42.0353982300885, 0.9897719651240777], 'CD38': [89.38053097345133, 0.9771965124077799], 'CD45': [83.1858407079646, 0.9746814218645203], 'CD56': [95.13274336283186, 0.9866700201207242], 'CD117': [71.68141592920354, 0.9539738430583502], 'HLA-DR': [91.15044247787611, 0.9315057008718981]}
+    ablation_dic_002 = {'SSC-A': [48.95104895104895, 0.9585127201565559], 'FSC-A': [65.03496503496504, 0.9906066536203523], 'FSC-H': [65.03496503496504, 0.9886497064579256], 'CD7': [79.02097902097903, 0.997651663405088], 'CD11B': [92.3076923076923, 0.9818003913894324], 'CD13': [90.9090909090909, 0.9927592954990214], 'CD33': [50.34965034965035, 0.9473581213307241], 'CD34': [62.93706293706294, 0.6796477495107632], 'CD38': [54.54545454545455, 0.3273972602739726], 'CD45': [65.03496503496504, 0.585518590998043], 'CD56': [100.0, 1.0], 'CD117': [91.60839160839161, 0.9972602739726028], 'HLA-DR': [86.01398601398601, 0.9937377690802348]}
+
+
 
     # 剪除蛋白组
     # if '002' in args.save_dir:

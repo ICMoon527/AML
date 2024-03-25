@@ -49,7 +49,8 @@ class DNN(nn.Module):
             return nn.Sequential(
                 nn.Linear(input_dim, output_dim),
                 nn.BatchNorm1d(output_dim),
-                self.activate()
+                self.activate(),
+                nn.Dropout(p=self.args.dropout_rate, inplace=False)  # 激活函数之后
             )
         else:
             return nn.Sequential(
