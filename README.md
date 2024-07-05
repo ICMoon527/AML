@@ -83,3 +83,30 @@
     通道的荧光，是积分的荧光还是哪种荧光，前向的，侧向的。
 
     减少管数，减少成本，
+
+
+
+## 无监督
+弄一个最终loss，为聚类细粒度结果的集合，同亚型病人的集合是否有相似的分布（分布相似度）
+蛋白联合表达
+
+### 层次聚类-Hierarchical Clustering
+https://blog.csdn.net/onroadliuyaqiong/article/details/119053833  它一次性地得到了整个聚类的过程，只要得到了上面那样的聚类树，想要分多少个cluster都可以直接根据树结构来得到结果，改变 cluster数目不需要再次计算数据点的归属
+
+### Clustering using K-Means
+https://zhuanlan.zhihu.com/p/619739126?utm_id=0
+手肘法：通过画出不同K值与SSE值的折线图，若SSE值下降过程中存在“肘点”（下降速度骤减的拐点处），该点所对应的K值即合适的聚类数。类似DCEC用卷积层替换全连接层后，网络对于文本等数据类型的聚类能力有明显下降，但提高了图像类型（保留了图像的局部特征）。
+model.inertia_ 是K-means聚类算法中的一个属性，它代表了各数据样本到其所属簇中心点的距离之和，也被称为误差平方和（Sum of Squared Errors, SSE）。一般而言，在执行K-means算法时，我们希望误差平方和越小越好。
+
+### Clustering using Spectral
+Unable to allocate 591. TiB for an array with shape (9016000, 9016000)
+
+### Clustering using Subspace Clustering
+由于不稳定性，这种子空间线性表达的方法可能不适用。
+
+### Clustering using GMM
+
+### Clustering using KL
+
+### Clustering using DBSCAN
+能够识别任意形状的聚类，并且对噪声点具有鲁棒性。min_samples=2才不会把所有点都认为是噪点。

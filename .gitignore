@@ -7,3 +7,5 @@ Results002/
 *.csv
 *.txt
 *.png
+*.npy
+*.npz
