@@ -267,6 +267,9 @@ if __name__ == '__main__':
         np.save('UnsupResults/HierarchicalClustering/denoised_data.npy', denoised_data)
     else:
         denoised_data = np.load('UnsupResults/HierarchicalClustering/denoised_data.npy')
+        csv_data = pd.DataFrame(denoised_data, columns=['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR'])
+        csv_data.to_csv('UnsupResults/HierarchicalClustering/denoised_data.csv', index=False)
+        exit()
     
     # Clustering
     hierarchicalClustering(denoised_data)
