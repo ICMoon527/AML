@@ -15,7 +15,9 @@ class AMLDataset(Dataset):
         '''
         object = ReadCSV()
         X, Y = object.getDataset(args.dataset, length=args.length)
+        print('读取数据完成')
         X, Y = self.preprocess(X, Y)  # (num, 10000, 15)
+        print('数据预处理（归一化）完成')
         self.all_X, self.all_Y = X.reshape((-1, X.shape[-1])), Y
         
         self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(X, Y, test_size=0.2, shuffle=args.shuffle, random_state=np.random.seed(1234))

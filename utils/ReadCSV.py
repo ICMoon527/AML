@@ -370,5 +370,5 @@ if __name__ == '__main__':
     # object.findSameProteinAndSaveFile('Data/ExtractedCSV')
     # object.findSameProteinAndSaveFile('Data/ExtractedCSV')
     # object.readUseful(object.useful_data_folder+'002')
-    X, Y = object.getDataset('Data/UsefulData', readNpz=False)
-    # print(X.shape, Y.shape, np.count_nonzero(Y==0), X.max())
+    X, Y = object.getDataset('Data/UsefulData', readNpz=True)
+    print(X.shape, Y.shape, np.count_nonzero(Y==0), X.max())

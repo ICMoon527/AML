@@ -65,7 +65,7 @@ def test(best_result, args, model, epoch, testloader, logger, model_att=None, di
     plt.ylabel("TPR")
     plt.xlim([0, 1])
     plt.ylim([0, 1])
-    plt.savefig(args.save_dir+'/AUC.png')
+    plt.savefig(args.save_dir+'/AUC.png', dpi=300)
 
     accuracy = 100. * float(correct) / float(total)
     logger.info("\n| Validation Epoch #%d\t\t\taccuracy =  %.4f" % (epoch, accuracy))

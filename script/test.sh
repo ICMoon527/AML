@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=6 ~/anaconda3/envs/taizhou/bin/python test_model.py
