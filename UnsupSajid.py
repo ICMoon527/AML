@@ -7,6 +7,7 @@ from sklearn.manifold import TSNE
 from scipy.cluster.hierarchy import linkage, fcluster
 from pycirclize import Circos
 import matplotlib.pyplot as plt
+from ReduceDataDimension import ReduceDimensionANOVA
 
 def checkData():
     # data = dd.read_csv(r"UnsupResults/HierarchicalClustering/denoised_data.csv", encoding = 'ISO-8859-1', blocksize=32e6)
@@ -16,21 +17,20 @@ def checkData():
 
 if __name__ == '__main__':
 
-    # Step 1: Dimensionality Reduction using t-SNE
-    data = checkData()  # (9016000, 2)
+    # Step 1: Dimensionality Reduction
+    reduced_data, reduced_patient_labels = ReduceDimensionANOVA()  # (350000, 2)
     print('Read Data Successfully')
     chunks = (1000000, 15)
 
     # data_np = data.compute()
     # tsne = TSNE(n_components=2, random_state=42)
     # data_reduced = tsne.fit_transform(data_np)
-    data_reduced = data
     print('Step 1 finished.')
 
     # Step 2: Apply Hierarchical Clustering
     # Perform hierarchical clustering on the reduced data
     n_clusters = 3  # Define the number of clusters you want
-    linkage_matrix = linkage(data_reduced, method='ward')  # (350000, 2)
+    linkage_matrix = linkage(reduced_data, method='ward')  # (350000, 2)
     cluster_labels = fcluster(linkage_matrix, t=n_clusters, criterion='maxclust')
     print('Step 2 finished.')
 

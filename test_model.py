@@ -19,7 +19,7 @@ import torch.nn as nn
 import pandas as pd
 import ppscore as pps
 
-
+AUC_dic = {}
 def test(best_result, args, model, epoch, testloader, logger, model_att=None, discard_protein_name=None, color_num=-1):
     model.eval()
     correct = 0.
@@ -54,6 +54,7 @@ def test(best_result, args, model, epoch, testloader, logger, model_att=None, di
     
     # AUC(Area Under Curve), ROC(Receiver Operating Characteristic)，正样本为0(M2)
     fpr, tpr, thresholds = metrics.roc_curve(target_list, score_list, pos_label=0)
+    AUC_dic[discard_protein_name] = [fpr, tpr]
     auc = metrics.auc(fpr, tpr)
     logger.info('AUC: {}'.format(auc))
 
@@ -177,6 +178,7 @@ if __name__ == '__main__':
             new_best, auc = test(best_result, args, model, epoch, testloader, logger, discard_protein_name=protein_list[i], color_num=i)
             ablation_dic[protein_list[i]] = [new_best, auc]
     print(ablation_dic)
+    np.save('Results/Test/AUC_dic.npy', AUC_dic)
 
     ablation_dic_001 = {'SSC-A': [62.83185840707964, 0.8620053655264923], 'FSC-A': [80.53097345132744, 0.9057679409792085], 'FSC-H': [60.176991150442475, 0.9076123407109322], 'CD7': [62.83185840707964, 0.8253688799463448], 'CD11B': [78.76106194690266, 0.9618544600938967], 'CD13': [82.30088495575221, 0.9858316566063046], 'CD19': [81.85840707964601, 0.9936284372904092], 'CD33': [81.85840707964601, 0.9891851106639838], 'CD34': [42.0353982300885, 0.9897719651240777], 'CD38': [89.38053097345133, 0.9771965124077799], 'CD45': [83.1858407079646, 0.9746814218645203], 'CD56': [95.13274336283186, 0.9866700201207242], 'CD117': [71.68141592920354, 0.9539738430583502], 'HLA-DR': [91.15044247787611, 0.9315057008718981]}
     ablation_dic_002 = {'SSC-A': [48.95104895104895, 0.9585127201565559], 'FSC-A': [65.03496503496504, 0.9906066536203523], 'FSC-H': [65.03496503496504, 0.9886497064579256], 'CD7': [79.02097902097903, 0.997651663405088], 'CD11B': [92.3076923076923, 0.9818003913894324], 'CD13': [90.9090909090909, 0.9927592954990214], 'CD33': [50.34965034965035, 0.9473581213307241], 'CD34': [62.93706293706294, 0.6796477495107632], 'CD38': [54.54545454545455, 0.3273972602739726], 'CD45': [65.03496503496504, 0.585518590998043], 'CD56': [100.0, 1.0], 'CD117': [91.60839160839161, 0.9972602739726028], 'HLA-DR': [86.01398601398601, 0.9937377690802348]}
