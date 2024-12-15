@@ -51,7 +51,7 @@ if __name__ == '__main__':
     co_occurrence_matrix = da.map_blocks(
         compute_co_occurrence,
         cluster_labels_da,
-        co_occurrence_matrix,
+        np.array(co_occurrence_matrix),
         dtype=int,
 )
 

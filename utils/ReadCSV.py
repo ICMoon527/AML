@@ -321,10 +321,10 @@ class ReadCSV():  # 2285 * 15
 
                     # 去除SSC-A为纵坐标的离群点
                     print('Discard points by SSC-A')
-                    numpy_data = SomeUtils.findAnomaliesBySSC_A(numpy_data, draw_fig=True)
+                    numpy_data = SomeUtils.findAnomaliesBySSC_A(numpy_data, draw_fig=False)
                     # 去除以FSC-A为x轴，FSC-H为y轴的离群点
                     print('Discard points by FSC-A & FSC-H')
-                    numpy_data = SomeUtils.findAnomaliesByFSC_AH(numpy_data, draw_fig=True)
+                    numpy_data = SomeUtils.findAnomaliesByFSC_AH(numpy_data, draw_fig=False)
                     # 去除FSC-A为60-600以外的点
                     lower, upper = 60, 600
                     print('Manually exclude data outside of [{}, {}]'.format(lower, upper))
@@ -339,7 +339,7 @@ class ReadCSV():  # 2285 * 15
                             i -= 1
                         i += 1
                     numpy_data = numpy_data.T
-                    SomeUtils.drawPoints(numpy_data_copy, lower, upper)
+                    # SomeUtils.drawPoints(numpy_data_copy, lower, upper)
 
                     # 舍去长度小于 length 的数据
                     if numpy_data.shape[1] < length:
@@ -370,5 +370,5 @@ if __name__ == '__main__':
     # object.findSameProteinAndSaveFile('Data/ExtractedCSV')
     # object.findSameProteinAndSaveFile('Data/ExtractedCSV')
     # object.readUseful(object.useful_data_folder+'002')
-    X, Y = object.getDataset('Data/UsefulData', readNpz=True)
+    X, Y = object.getDataset('Data/UsefulData', readNpz=False)
     print(X.shape, Y.shape, np.count_nonzero(Y==0), X.max())

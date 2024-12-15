@@ -2,6 +2,7 @@ import math
 import os
 from traceback import print_last
 import numpy as np
+import matplotlib.pyplot as plt
 
 def get_hms(seconds):
     m, s = divmod(seconds, 60)
@@ -56,21 +57,41 @@ def try_make_dir(d):
         os.makedirs(d)
 
 def drawAnomaliesBySSC_A(points_2D, lower_limit, upper_limit):
-    import plotly.express as px
     color = points_2D.T[:,0].copy()
     color_str = points_2D.T[:,0].copy().astype('str')
     
-    color_str[(lower_limit<color)*(color<upper_limit)] = 'rgb(0, 0, 255)'
-    color_str[upper_limit<points_2D.T[:,0]] = 'rgb(255, 0, 0)'
-    color_str[points_2D.T[:,0]<lower_limit] = 'rgb(255, 0, 0)'
+    color_str[(lower_limit<color)*(color<upper_limit)] = 'blue'
+    color_str[upper_limit<points_2D.T[:,0]] = 'red'
+    color_str[points_2D.T[:,0]<lower_limit] = 'red'
     
-    fig = px.scatter(x=[x+1 for x in range(points_2D.shape[1])], y=points_2D.T[:,0], title='Scatter Plot with Color Gradient', labels=dict(x="Time", y="SSC-A"))
-    fig.update_xaxes(title={'font':{'size': 30}})
-    fig.update_yaxes(title={'font':{'size': 30}})
-    fig.update_traces(marker=dict(color=color_str))
-    fig.update_layout(xaxis=dict(tickfont={'size': 25}), yaxis=dict(tickfont={'size': 16}))
-    fig.write_image('/home/ljw/Code/AML/PreprocessResults/SSC_A.png')
-    # fig.show()
+    # 创建一个新的图形
+    fig, ax = plt.subplots(figsize=(16, 8))
+    points_2D = points_2D.T
+
+    # 绘制散点图
+    scatter = ax.scatter([x+1 for x in range(points_2D.shape[0])], points_2D[:, 0], c=color_str, s=10)
+
+    # 设置标题和坐标轴标签，并调整字体大小和粗体显示
+    ax.set_title('Scatter Plot with Color Gradient', fontsize=16, fontweight='bold')
+    ax.set_xlabel('Time', fontsize=16, fontweight='bold')
+    ax.set_ylabel('SSC-A', fontsize=16, fontweight='bold')
+
+    # 更新刻度标签字体大小
+    for tick in ax.get_xticklabels():
+        tick.set_fontsize(12)
+        tick.set_fontweight('bold')
+    for tick in ax.get_yticklabels():
+        tick.set_fontsize(10)
+        tick.set_fontweight('bold')
+
+    # 移除背景颜色和网格线，并设置为白色背景
+    ax.set_facecolor('white')  # 设置绘图区域背景颜色为白色
+    fig.patch.set_facecolor('white')  # 设置整个绘图纸的背景颜色为白色
+    ax.grid(False)  # 关闭网格线
+
+    # 保存图像为高 DPI 格式的文件
+    plt.savefig('/home/ljw/Code/AML/PreprocessResults/SSC_A.png', dpi=600, bbox_inches='tight')
+    plt.close()
     return 0
 
 def findAnomaliesBySSC_A(points_array, cut_off=2, draw_fig=False):  # 'SSC-A', 'FSC-A', 'FSC-H'  (15, 500000)
@@ -93,22 +114,42 @@ def findAnomaliesBySSC_A(points_array, cut_off=2, draw_fig=False):  # 'SSC-A', '
     return np.array(new_array).T
 
 def drawAnomaliesByFSC_AH(points_2D, lower_limit, upper_limit):
-    import plotly.express as px
     slopes = points_2D[2, :] / (points_2D[1, :]+0.001)
     color = slopes.copy()
     color_str = points_2D.T[:,0].copy().astype('str')
     
-    color_str[(lower_limit<color)*(color<upper_limit)] = 'rgb(0, 0, 255)'
-    color_str[upper_limit<slopes] = 'rgb(255, 0, 0)'
-    color_str[slopes<lower_limit] = 'rgb(255, 0, 0)'
+    color_str[(lower_limit<color)*(color<upper_limit)] = 'blue'
+    color_str[upper_limit<slopes] = 'red'
+    color_str[slopes<lower_limit] = 'red'
     
-    fig = px.scatter(x=points_2D[1, :], y=points_2D[2, :], title='Scatter Plot with Color Gradient', labels=dict(x="FSC-A", y="FSC-H"))
-    fig.update_xaxes(title={'font':{'size': 30}})
-    fig.update_yaxes(title={'font':{'size': 30}})
-    fig.update_traces(marker=dict(color=color_str))
-    fig.update_layout(xaxis=dict(tickfont={'size': 25}), yaxis=dict(tickfont={'size': 16}))
-    fig.write_image('/home/ljw/Code/AML/PreprocessResults/FSC.png')
-    # fig.show()
+    # 创建一个新的图形
+    fig, ax = plt.subplots(figsize=(16, 8))
+    points_2D = points_2D.T
+
+    # 绘制散点图
+    scatter = ax.scatter(x=points_2D[:, 1], y=points_2D[:, 2], c=color_str, s=10)
+
+    # 设置标题和坐标轴标签，并调整字体大小和粗体显示
+    ax.set_title('Scatter Plot with Color Gradient', fontsize=16, fontweight='bold')
+    ax.set_xlabel('FSC-A', fontsize=16, fontweight='bold')
+    ax.set_ylabel('FSC-H', fontsize=16, fontweight='bold')
+
+    # 更新刻度标签字体大小
+    for tick in ax.get_xticklabels():
+        tick.set_fontsize(12)
+        tick.set_fontweight('bold')
+    for tick in ax.get_yticklabels():
+        tick.set_fontsize(10)
+        tick.set_fontweight('bold')
+
+    # 移除背景颜色和网格线，并设置为白色背景
+    ax.set_facecolor('white')  # 设置绘图区域背景颜色为白色
+    fig.patch.set_facecolor('white')  # 设置整个绘图纸的背景颜色为白色
+    ax.grid(False)  # 关闭网格线
+
+    # 保存图像为高 DPI 格式的文件
+    plt.savefig('/home/ljw/Code/AML/PreprocessResults/FSC.png', dpi=600, bbox_inches='tight')
+    plt.close()
     return 0
 
 def findAnomaliesByFSC_AH(points_array, cut_off=1, draw_fig=False):  # 'SSC-A', 'FSC-A', 'FSC-H'  (15, 500000)
@@ -139,17 +180,38 @@ def drawPoints(points, lower_limit, upper_limit):
     color = points.T[:, 1].copy()
     color_str = points.T[:, 1].copy().astype('str')
     
-    color_str[(lower_limit<color)*(color<upper_limit)] = 'rgb(0, 0, 255)'
-    color_str[upper_limit<=points.T[:, 1]] = 'rgb(255, 0, 0)'
-    color_str[points.T[:, 1]<=lower_limit] = 'rgb(255, 0, 0)'
+    color_str[(lower_limit<color)*(color<upper_limit)] = 'blue'
+    color_str[upper_limit<=points.T[:, 1]] = 'red'
+    color_str[points.T[:, 1]<=lower_limit] = 'red'
 
-    fig = px.scatter(x=points.T[:, 1], y=points.T[:, 2], title='Scatter Plot with Color Gradient', labels=dict(x="FSC-A", y="SSC-A"))
-    fig.update_xaxes(title={'font':{'size': 30}})
-    fig.update_yaxes(title={'font':{'size': 30}})
-    fig.update_layout(xaxis=dict(tickfont={'size': 25}), yaxis=dict(tickfont={'size': 16}))
-    fig.update_traces(marker=dict(color=color_str))
-    fig.write_image('/home/ljw/Code/AML/PreprocessResults/SFSC.png')
-    fig.show()
+    # 创建一个新的图形
+    fig, ax = plt.subplots(figsize=(16, 8))
+
+    # 绘制散点图
+    scatter = ax.scatter(x=points.T[:, 1], y=points.T[:, 0], c=color_str, s=10)
+
+    # 设置标题和坐标轴标签，并调整字体大小和粗体显示
+    ax.set_title('Scatter Plot with Color Gradient', fontsize=16, fontweight='bold')
+    ax.set_xlabel('FSC-A', fontsize=16, fontweight='bold')
+    ax.set_ylabel('SSC-A', fontsize=16, fontweight='bold')
+    ax.set_ylim(bottom=0, top=1000)
+
+    # 更新刻度标签字体大小
+    for tick in ax.get_xticklabels():
+        tick.set_fontsize(12)
+        tick.set_fontweight('bold')
+    for tick in ax.get_yticklabels():
+        tick.set_fontsize(10)
+        tick.set_fontweight('bold')
+
+    # 移除背景颜色和网格线，并设置为白色背景
+    ax.set_facecolor('white')  # 设置绘图区域背景颜色为白色
+    fig.patch.set_facecolor('white')  # 设置整个绘图纸的背景颜色为白色
+    ax.grid(False)  # 关闭网格线
+
+    # 保存图像为高 DPI 格式的文件
+    plt.savefig('/home/ljw/Code/AML/PreprocessResults/SFSC.png', dpi=600, bbox_inches='tight')
+    plt.close()
     return 0
 
 if __name__ == '__main__':

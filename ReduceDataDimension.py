@@ -50,7 +50,7 @@ def ReduceDimensionUMAP():
             umap_df = pd.DataFrame(significant_data, columns=['UMAP1', 'UMAP2'])
             umap_df['Label'] = Y_train  # Add the group labels (M2: 0, M5: 1)
 
-            # # Step 3: Plot UMAP
+            # # Step 5: Plot UMAP
             plt.figure(figsize=(8, 5))
             sns.scatterplot(x='UMAP1', y='UMAP2', hue='Label', data=umap_df, palette={0: 'blue', 1: 'green'}, s=50)
             plt.savefig('UnsupResults/Sajid/UMAP_{}_{}.png'.format(n_neighbor, str(min_dist).replace('.', '')))
@@ -66,7 +66,7 @@ def ReduceDimensionANOVA():
     X, Y = X.reshape((-1, X.shape[-1])), np.repeat(Y, repeats=10000)   ###############################
 
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, shuffle=True, random_state=np.random.seed(1234))  # 固定种子是个好习惯啊！
-    data = np.load('Data/npyData/UMAP_Data_100_0.npy')  # data and Y_train
+    data = np.load('Data/npyData/UMAP_Data_100_0.npy')  # data(X_train) and Y_train
 
     # Specify the features and the group column
     features = ['UMAP1', 'UMAP2']  #these are sepsis features but you can replace with your features
@@ -100,7 +100,7 @@ def ReduceDimensionANOVA():
     # reduced_df = df[significant_features + ['Label']]
     # print(reduced_df.shape)
 
-    sample_size = 350000
+    sample_size = 3500000
     n_samples_per_group = sample_size // 2
     group_0_indices = np.where(df['Label'] == 0)[0]
     group_1_indices = np.where(df['Label'] == 1)[0]
@@ -120,3 +120,4 @@ def ReduceDimensionANOVA():
 if __name__ == '__main__':
     # ReduceDimensionUMAP()
     reduced_data, reduced_patient_labels = ReduceDimensionANOVA()
+    print(reduced_data.shape, reduced_patient_labels.shape)

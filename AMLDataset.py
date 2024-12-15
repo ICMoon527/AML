@@ -141,9 +141,10 @@ class AMLDataset(Dataset):
         import ppscore as pps
         import pandas as pd
         import seaborn as sns
+        import matplotlib.pyplot as plt
 
-        # useful_items = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR']
-        useful_items = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'HLA-DR']
+        useful_items = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR']
+        # useful_items = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'HLA-DR']
         # PPSCORE
         df = pd.DataFrame()
         Y = list()
@@ -156,7 +157,7 @@ class AMLDataset(Dataset):
             df[useful_items[i]] = self.all_X[:, i]
         df["y"] = Y
 
-        # df.drop(columns=['DR'], inplace=True)
+        df.drop(columns=['DR'], inplace=True)
         # print(df.head())
 
         predictors_df = pps.predictors(df, y="y")
@@ -166,13 +167,19 @@ class AMLDataset(Dataset):
 
         matrix_df = pps.matrix(df)[['x', 'y', 'ppscore']].pivot(columns='x', index='y', values='ppscore')
         fig = sns.heatmap(matrix_df, vmin=0, vmax=1, cmap="Blues", linewidths=2, annot=True, annot_kws={"fontsize":5})
-        fig.set_title('PPS Of Every Features in Tube 2 Using Decision Tree\n(y Representing Classification Result)', fontsize=10)
-        fig.set_xticklabels(['CD117', 'CD11B', 'CD13', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD7', 'FSC-A', 'FSC-H', 'HLA-DR', 'SSC-A', 'y'], fontsize=7)
-        fig.set_yticklabels(['CD117', 'CD11B', 'CD13', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD7', 'FSC-A', 'FSC-H', 'HLA-DR', 'SSC-A', 'y'], fontsize=7)
+        fig.set_xticklabels(['CD117', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD7', 'FSC-A', 'FSC-H', 'HLA-DR', 'SSC-A', 'y'], fontsize=7)
+        fig.set_yticklabels(['CD117', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD7', 'FSC-A', 'FSC-H', 'HLA-DR', 'SSC-A', 'y'], fontsize=7)
+        # fig.set_xticklabels(['CD117', 'CD11B', 'CD13', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD7', 'FSC-A', 'FSC-H', 'HLA-DR', 'SSC-A', 'y'], fontsize=7)
+        # fig.set_yticklabels(['CD117', 'CD11B', 'CD13', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD7', 'FSC-A', 'FSC-H', 'HLA-DR', 'SSC-A', 'y'], fontsize=7)
         fig.set_ylabel(' ')
         fig.set_xlabel(' ')
+        for tick in fig.get_xticklabels():
+            tick.set_fontweight('bold')
+        for tick in fig.get_yticklabels():
+            tick.set_fontweight('bold')
         fig = fig.get_figure()
-        fig.savefig('PPSResults/002.png', dpi=400)
+        fig.savefig('PPSResults/001.png', dpi=600)
+        matrix_df.to_excel('PPSResults/001.xlsx', index=True)
 
 if __name__ == '__main__':
     import argparse
@@ -209,7 +216,7 @@ if __name__ == '__main__':
     input, target, _ = object.__getitem__(0)
     print(input.shape)
     
-    # object.getPPScore()
+    object.getPPScore()
 
     # ablation_dic_001 = {'SSC-A': [62.83185840707964, 0.8620053655264923], 'FSC-A': [80.53097345132744, 0.9057679409792085], 'FSC-H': [60.176991150442475, 0.9076123407109322], 'CD7': [62.83185840707964, 0.8253688799463448], 'CD11B': [78.76106194690266, 0.9618544600938967], 'CD13': [82.30088495575221, 0.9858316566063046], 'CD19': [81.85840707964601, 0.9936284372904092], 'CD33': [81.85840707964601, 0.9891851106639838], 'CD34': [42.0353982300885, 0.9897719651240777], 'CD38': [89.38053097345133, 0.9771965124077799], 'CD45': [83.1858407079646, 0.9746814218645203], 'CD56': [95.13274336283186, 0.9866700201207242], 'CD117': [71.68141592920354, 0.9539738430583502], 'HLA-DR': [91.15044247787611, 0.9315057008718981]}
     # ablation_dic_002 = {'SSC-A': [48.95104895104895, 0.9585127201565559], 'FSC-A': [65.03496503496504, 0.9906066536203523], 'FSC-H': [65.03496503496504, 0.9886497064579256], 'CD7': [79.02097902097903, 0.997651663405088], 'CD11B': [92.3076923076923, 0.9818003913894324], 'CD13': [90.9090909090909, 0.9927592954990214], 'CD33': [50.34965034965035, 0.9473581213307241], 'CD34': [62.93706293706294, 0.6796477495107632], 'CD38': [54.54545454545455, 0.3273972602739726], 'CD45': [65.03496503496504, 0.585518590998043], 'CD56': [100.0, 1.0], 'CD117': [91.60839160839161, 0.9972602739726028], 'HLA-DR': [86.01398601398601, 0.9937377690802348]}

@@ -18,7 +18,9 @@ from torch.autograd import Variable
 import torch.nn as nn
 import pandas as pd
 import ppscore as pps
+from matplotlib import pyplot as plt
 
+fig, ax = plt.subplots()
 AUC_dic = {}
 def test(best_result, args, model, epoch, testloader, logger, model_att=None, discard_protein_name=None, color_num=-1):
     model.eval()
@@ -58,15 +60,18 @@ def test(best_result, args, model, epoch, testloader, logger, model_att=None, di
     auc = metrics.auc(fpr, tpr)
     logger.info('AUC: {}'.format(auc))
 
-    from matplotlib import pyplot as plt
     colors = ['pink', 'grey', 'rosybrown', 'red', 'chocolate', 'tan', 'orange', 'lawngreen', 'darkgreen', 'aquamarine', 'dodgerblue', 'blue', 'darkviolet', 'magenta', 'brown', 'black']
-    plt.plot(fpr, tpr, label=discard_protein_name, color=colors[color_num])
-    plt.legend()
-    plt.xlabel("FPR")
-    plt.ylabel("TPR")
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    plt.savefig(args.save_dir+'/AUC.png', dpi=300)
+    ax.plot(fpr, tpr, label=discard_protein_name, color=colors[color_num])
+    ax.legend()
+    ax.set_xlabel("FPR", fontweight='bold')
+    ax.set_ylabel("TPR", fontweight='bold')
+    ax.set_xlim([0, 1])
+    ax.set_ylim([0, 1])
+    for tick in ax.get_xticklabels():
+        tick.set_fontweight('bold')
+    for tick in ax.get_yticklabels():
+        tick.set_fontweight('bold')
+    plt.savefig(args.save_dir+'/AUC.png', dpi=600)
 
     accuracy = 100. * float(correct) / float(total)
     logger.info("\n| Validation Epoch #%d\t\t\taccuracy =  %.4f" % (epoch, accuracy))
@@ -175,7 +180,7 @@ if __name__ == '__main__':
             else:
                 testset = AMLDataset.AMLDataset(args, False, [i])
             testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=True, num_workers=16, worker_init_fn=np.random.seed(1234))
-            new_best, auc = test(best_result, args, model, epoch, testloader, logger, discard_protein_name=protein_list[i], color_num=i)
+            new_best, auc = test(best_result, args, model, epoch, testloader, logger, discard_protein_name=protein_list[i], color_num=i)  # 6.3589s
             ablation_dic[protein_list[i]] = [new_best, auc]
     print(ablation_dic)
     np.save('Results/Test/AUC_dic.npy', AUC_dic)
