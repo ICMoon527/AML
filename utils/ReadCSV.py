@@ -304,6 +304,7 @@ class ReadCSV():  # 2285 * 15
 
         length = int(length)
         X, Y = list(), list()
+        patient_ID = 1
         # useful_items = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR',      'HL-DR']  # 001
         # useful_items = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'HLA-DR',       'HL-DR', '11b']        # 002
 
@@ -355,6 +356,8 @@ class ReadCSV():  # 2285 * 15
                             else:
                                 print('ERROR')
                                 exit()
+                    np.save('Data/DataInPatients/Patient_{}_type_{}.npy'.format(patient_ID, 0 if 'M2' in file else 1), numpy_data.T)
+                    patient_ID += 1
         
         # 保存一下根据医学知识预处理过的数据
         np.savez('Data/npyData/proceededData002.npz', X=np.array(X), Y=np.array(Y))
@@ -371,4 +374,4 @@ if __name__ == '__main__':
     # object.findSameProteinAndSaveFile('Data/ExtractedCSV')
     # object.readUseful(object.useful_data_folder+'002')
     X, Y = object.getDataset('Data/UsefulData', readNpz=False)
-    print(X.shape, Y.shape, np.count_nonzero(Y==0), X.max())
+    # print(X.shape, Y.shape, np.count_nonzero(Y==0), X.max())

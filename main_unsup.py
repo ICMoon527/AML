@@ -16,6 +16,8 @@ import os
 import tqdm
 from dask.distributed import Client, progress
 import dask
+import dask.array as da
+from pycirclize import Circos
 
 def parallel_silhouette_score(data, labels, batch_size=10000):
     n_samples = len(data)
@@ -46,17 +48,19 @@ def draw_K(labels, data, centers, K):
 
     # 使用不同的颜色和标记来表示不同的簇
     unique_labels = np.unique(labels)
+    cmap = plt.get_cmap('tab20')  # 'tab20' 是一个适合分类数据的 colormap
+    colors = [cmap(i) for i in np.linspace(0, 1, 20)]
 
-    for label in unique_labels:
+    for i, label in enumerate(unique_labels):
         # 获取属于当前簇的所有数据点
         cluster_data = data[labels == label]
         
         # 绘制这些数据点
         plt.scatter(cluster_data[:, 0], cluster_data[:, 1], 
-                    label=f'Cluster {label}', alpha=0.7)
+                    label=f'Cluster {label}', alpha=0.7, c=colors[i], s=30)
 
     # 可选：绘制簇中心（仅适用于某些聚类算法，如 KMeans)
-    plt.scatter(centers[:, 0], centers[:, 1], c='black', s=200, alpha=0.75, marker='X', label='Centers')
+    plt.scatter(centers[:, 0], centers[:, 1], c='black', s=150, alpha=0.75, marker='X', label='Centers')
 
     # 添加标题和标签
     plt.title('Clustering Results')
@@ -70,14 +74,14 @@ def draw_K(labels, data, centers, K):
     plt.savefig('UnsupResults/KMeans/ClusteringResults_K{}.png'.format(K))
     plt.close()
 
-def BaseClusteringModel(type, X_train):
+def BaseClusteringModel(type, X_train, draw=False):
     if type in 'MiniBatchKMeans':
         distortions = []
         sses = []
         silhouette_scores = []
         calinski_harabasz_scores = []
         davies_bouldin_scores = []
-        K = range(2, 20)
+        # K = range(2, 20)
         K = [16]
         for k in K:
             print('=================================== K = {} =========================================='.format(k))
@@ -97,9 +101,10 @@ def BaseClusteringModel(type, X_train):
             davies_bouldin_scores.append(parallel_davies_bouldin_score(X_train, Model.labels_))
 
             if len(K) == 1:
-                draw_K(Model.labels_, X_train, Model.cluster_centers_, K[0])
-                print('Drawing Finished')
-                return 0
+                if draw:
+                    draw_K(Model.labels_, X_train, Model.cluster_centers_, K[0])
+                    print('Drawing Finished')
+                return Model.labels_
 
         plt.plot(K, sses, label='WCSS', marker='o', linestyle='-', linewidth=1)
         plt.xlabel('optimal K')
@@ -124,10 +129,7 @@ def BaseClusteringModel(type, X_train):
         plt.ylabel('davies_bouldin_score')
         plt.savefig('UnsupResults/KMeans/2-20_davies_bouldin_score.png')
         plt.close()
-
-
-
-        
+    
 
     elif type in 'SpectralClustering':
         # X_train = X_train[0:100]
@@ -338,6 +340,26 @@ def hierarchicalClustering(X, useMiniBatch=True, batch_size=10000):
     return 0
 
 
+def compute_co_occurrence(cluster_labels, n_clusters):
+    # 检查输入是否有效
+    if len(cluster_labels) == 0:
+        raise ValueError("The input 'cluster_labels' cannot be empty.")
+
+    # 初始化共现矩阵
+    co_occurrence_matrix = np.zeros((n_clusters, n_clusters), dtype=int)
+
+    # 计算共现矩阵
+    for i in range(len(cluster_labels)):
+        for j in range(i + 1, len(cluster_labels)):
+            label_i = cluster_labels[i]
+            label_j = cluster_labels[j]
+            if label_i != label_j:  # 如果需要包含自身共现，则移除此行
+                co_occurrence_matrix[label_i, label_j] += 1
+                co_occurrence_matrix[label_j, label_i] += 1  # 确保矩阵是对称的
+
+    return co_occurrence_matrix
+
+
 if __name__ == '__main__':
     client = Client()  # 创建Dask本地客户端
 
@@ -347,25 +369,44 @@ if __name__ == '__main__':
     X = X.transpose(0, 2, 1)  # (num, 10000, 15)
     X, Y = X.reshape((-1, X.shape[-1])), np.repeat(Y, repeats=10000)   ###############################
 
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, shuffle=True, random_state=np.random.seed(1234))  # 固定种子是个好习惯啊！
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, shuffle=False, random_state=np.random.seed(1234))  # 固定种子是个好习惯啊！
     X_train = np.load('Data/npyData/UMAP_Data_100_0.npy')  # data(X_train) and Y_train
 
     # Specify the features and the group column
-    features = ['UMAP1', 'UMAP2']  #these are sepsis features but you can replace with your features
-    group_column = ['Label']  # Replace with the actual name of your group column
+    features = ['UMAP1', 'UMAP2']
+    group_column = ['Label']
     
+    cluster_labels = BaseClusteringModel('MiniBatchKMeans', X_train, draw=False)
+    n_clusters = max(cluster_labels)+1
 
-    BaseClusteringModel('MiniBatchKMeans', X_train)
-    # if not os.path.exists('UnsupResults/HierarchicalClustering/denoised_data.npy'):
-    #     denoised_data = PCADenoising(X_train, Y_train)
-    #     np.save('UnsupResults/HierarchicalClustering/denoised_data.npy', denoised_data)
-    # else:
-    #     denoised_data = np.load('UnsupResults/HierarchicalClustering/denoised_data.npy')
-    #     csv_data = pd.DataFrame(denoised_data, columns=['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR'])
-    #     csv_data.to_csv('UnsupResults/HierarchicalClustering/denoised_data.csv', index=False)
-    #     exit()
-    
-    # # Clustering
-    # hierarchicalClustering(denoised_data)
+    # Step 3: Create Co-occurrence Matrix using Dask
+
+    # 确保所有标签都在有效的范围内
+    unique_labels = np.unique(cluster_labels)
+
+    # 计算共现矩阵
+    co_occurrence_matrix = compute_co_occurrence(cluster_labels, n_clusters)
+    print(co_occurrence_matrix)
+
+    print('Step 3 finished...')
+
+    # Step 4: Convert Co-occurrence Matrix to DataFrame for Visualization
+    row_names = [f"Cluster {i}" for i in range(1, n_clusters + 1)]
+    co_occurrence_df = pd.DataFrame(co_occurrence_matrix, index=row_names, columns=row_names)
+
+    # Step 5: Create and Display Chord Diagram using pycirclize
+    circos = Circos.initialize_from_matrix(
+        co_occurrence_df,
+        space=2,
+        r_lim=(93, 100),
+        cmap="tab10",
+        ticks_interval=100000,
+        label_kws=dict(r=94, size=12, color="white"),
+    )
+
+    # Plot the Chord Diagram
+    fig = circos.plotfig()
+    plt.savefig('UnsupResults/KMeans/ChordDiagram.png')
+    plt.close()
 
     client.close()

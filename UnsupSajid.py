@@ -1,79 +1,275 @@
+import dask.array
+import torch
 import numpy as np
 import pandas as pd
-import dask.dataframe as dd
-import dask.array as da
-# import dask_ml.cluster
-from sklearn.manifold import TSNE
-from scipy.cluster.hierarchy import linkage, fcluster
-from pycirclize import Circos
 import matplotlib.pyplot as plt
-from ReduceDataDimension import ReduceDimensionANOVA
+from sklearn.cluster import KMeans, MiniBatchKMeans, SpectralClustering, DBSCAN
+from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
+from scipy.spatial.distance import cdist
+from sklearn.datasets import load_iris
+from sklearn.metrics import silhouette_samples
+from sklearn.preprocessing import StandardScaler
 
-def checkData():
-    # data = dd.read_csv(r"UnsupResults/HierarchicalClustering/denoised_data.csv", encoding = 'ISO-8859-1', blocksize=32e6)
-    # print(data.isnull().sum().compute())
-    data = np.load('Data/npyData/UMAP_Data.npy')
-    return data
+from utils.ReadCSV import ReadCSV
+from sklearn.model_selection import train_test_split
+from sklearn.decomposition import PCA
+import os
+import tqdm
+from dask.distributed import Client, progress
+import dask
+import dask.array as da
+from pycirclize import Circos
+import seaborn as sns
+import joblib
 
-if __name__ == '__main__':
+def parallel_silhouette_score(data, labels, batch_size=10000):
+    n_samples = len(data)
+    batches = [slice(i, min(i + batch_size, n_samples)) for i in range(0, n_samples, batch_size)]
+    # 定义延迟任务
+    tasks = [dask.delayed(silhouette_samples)(data[slice_obj], labels[slice_obj]) for slice_obj in batches]
+    # 执行所有任务
+    results = dask.compute(*tasks)
+    # 将结果拼接成一个数组
+    all_scores = np.concatenate(results)
+    # 计算平均轮廓系数
+    silhouette_avg = np.mean(all_scores)
+    
+    return silhouette_avg
 
-    # Step 1: Dimensionality Reduction
-    reduced_data, reduced_patient_labels = ReduceDimensionANOVA()  # (350000, 2)
-    print('Read Data Successfully')
-    chunks = (1000000, 15)
+def parallel_calinski_harabasz_score(dask_data, labels):
+    dask_data = dask.array.from_array(dask_data, chunks=(100000, -1))
+    result = calinski_harabasz_score(dask_data.compute(), labels)
+    return result
 
-    # data_np = data.compute()
-    # tsne = TSNE(n_components=2, random_state=42)
-    # data_reduced = tsne.fit_transform(data_np)
-    print('Step 1 finished.')
+def parallel_davies_bouldin_score(dask_data, labels):
+    dask_data = dask.array.from_array(dask_data, chunks=(100000, -1))
+    result = davies_bouldin_score(dask_data.compute(), labels)
+    return result
 
-    # Step 2: Apply Hierarchical Clustering
-    # Perform hierarchical clustering on the reduced data
-    n_clusters = 3  # Define the number of clusters you want
-    linkage_matrix = linkage(reduced_data, method='ward')  # (350000, 2)
-    cluster_labels = fcluster(linkage_matrix, t=n_clusters, criterion='maxclust')
-    print('Step 2 finished.')
+def draw_K(labels, data, centers, K):
+    plt.figure(figsize=(10, 6))
 
-    # Step 3: Create Co-occurrence Matrix using Dask
-    cluster_labels_da = da.from_array(cluster_labels, chunks=(1000000,))
-    co_occurrence_matrix = da.zeros((n_clusters, n_clusters), dtype=int)
+    # 使用不同的颜色和标记来表示不同的簇
+    unique_labels = np.unique(labels)
+    cmap = plt.get_cmap('tab20')  # 'tab20' 是一个适合分类数据的 colormap
+    colors = [cmap(i) for i in np.linspace(0, 1, 20)]
 
-    # Function to compute co-occurrence for a chunk
-    def compute_co_occurrence(chunk, co_occurrence_matrix):
-        for i in range(len(chunk)):
-            for j in range(i + 1, len(chunk)):  # Avoid double counting pairs
-                if chunk[i] != chunk[j]:
-                    co_occurrence_matrix[chunk[i] - 1, chunk[j] - 1] += 1
-                    co_occurrence_matrix[chunk[j] - 1, chunk[i] - 1] += 1
-        return co_occurrence_matrix
+    for i, label in enumerate(unique_labels):
+        # 获取属于当前簇的所有数据点
+        cluster_data = data[labels == label]
+        
+        # 绘制这些数据点
+        plt.scatter(cluster_data[:, 0], cluster_data[:, 1], 
+                    label=f'Cluster {label}', alpha=0.7, c=colors[i], s=30)
 
-    # Parallel computation of co-occurrence matrix using Dask
-    co_occurrence_matrix = da.map_blocks(
-        compute_co_occurrence,
-        cluster_labels_da,
-        np.array(co_occurrence_matrix),
-        dtype=int,
-)
+    # 可选：绘制簇中心（仅适用于某些聚类算法，如 KMeans)
+    plt.scatter(centers[:, 0], centers[:, 1], c='black', s=150, alpha=0.75, marker='X', label='Centers')
 
-    co_occurrence_matrix = co_occurrence_matrix.compute()  # Convert to NumPy after computation
-    print('Step 3 finished.')
+    # 添加标题和标签
+    plt.title('Clustering Results')
+    plt.xlabel('Feature 1')
+    plt.ylabel('Feature 2')
 
-    # Step 4: Convert Co-occurrence Matrix to DataFrame for Visualization
-    row_names = [f"Cluster {i}" for i in range(1, n_clusters + 1)]
-    co_occurrence_df = pd.DataFrame(co_occurrence_matrix, index=row_names, columns=row_names)
-    print('Step 4 finished.')
+    # 显示图例
+    plt.legend()
 
-    # Step 5: Create and Display Chord Diagram using pycirclize
+    # 保存图形
+    plt.savefig('UnsupResults/KMeans/ClusteringResults_K{}.png'.format(K))
+    plt.close()
+
+def KMeans(X_train, K, draw=False):
+    distortions = []
+    sses = []
+    silhouette_scores = []
+    calinski_harabasz_scores = []
+    davies_bouldin_scores = []
+    
+    for k in K:
+        print('=================================== K = {} =========================================='.format(k))
+        #分别构建各种K值下的聚类器
+        Model = MiniBatchKMeans(n_clusters=k, n_init='auto', verbose=1, batch_size=100000)
+        Model.fit(X_train)
+        # 保存模型
+        joblib.dump(Model, 'UnsupResults/KMeansFor{}/kmeans_model.skops'.format(k))
+
+        if len(K) == 1:
+            if draw:
+                draw_K(Model.labels_, X_train, Model.cluster_centers_, K[0])
+                print('Drawing Finished')
+            return Model.labels_
+
+        #计算各个样本到其所在簇类中心欧式距离(保存到各簇类中心的距离的最小值)
+        distortions.append(sum(np.min(cdist(X_train, Model.cluster_centers_, 'euclidean'), axis=1)) / X_train.shape[0])
+        sses.append(Model.inertia_)
+        silhouette_scores.append(parallel_silhouette_score(X_train, Model.labels_))
+        calinski_harabasz_scores.append(parallel_calinski_harabasz_score(X_train, Model.labels_))
+        davies_bouldin_scores.append(parallel_davies_bouldin_score(X_train, Model.labels_))
+
+    plt.plot(K, sses, label='WCSS', marker='o', linestyle='-', linewidth=1)
+    plt.xlabel('optimal K')
+    plt.ylabel('WCSS')
+    plt.savefig('UnsupResults/KMeans/2-20.png')
+    plt.close()
+
+    plt.plot(K, silhouette_scores, label='silhouette', marker='o', linestyle='-', linewidth=1)
+    plt.xlabel('optimal K')
+    plt.ylabel('silhouette_score')
+    plt.savefig('UnsupResults/KMeans/2-20_silhouette_score.png')
+    plt.close()
+
+    plt.plot(K, calinski_harabasz_scores, label='calinski_harabasz', marker='o', linestyle='-', linewidth=1)
+    plt.xlabel('optimal K')
+    plt.ylabel('calinski_harabasz_score')
+    plt.savefig('UnsupResults/KMeans/2-20_calinski_harabasz_score.png')
+    plt.close()
+
+    plt.plot(K, davies_bouldin_scores, label='davies_bouldin', marker='o', linestyle='-', linewidth=1)
+    plt.xlabel('optimal K')
+    plt.ylabel('davies_bouldin_score')
+    plt.savefig('UnsupResults/KMeans/2-20_davies_bouldin_score.png')
+    plt.close()
+
+
+def CountClusterInPatient(data_scaled, cluster_labels, patient_cell_num):
+    # Evaluate clustering using silhouette score (higher is better)
+    # silhouette_avg = silhouette_score(data_scaled, cluster_labels)
+    # print(f"Silhouette Score: {silhouette_avg:.3f}")
+
+    # Analyze clustering: Count number of cells per cluster for each patient
+    n_clusters = max(cluster_labels)+1
+    n_patients = len(patient_cell_num)
+    cluster_counts = np.zeros((n_patients, n_clusters), dtype=int)
+
+    start_idx = 0
+    for patient_idx, n_cells_per_patient in patient_cell_num:
+        end_idx = start_idx + n_cells_per_patient
+        patient_cluster_labels = cluster_labels[start_idx:end_idx]
+        start_idx = end_idx
+        
+        # Count number of cells in each cluster for this patient
+        unique, counts = np.unique(patient_cluster_labels, return_counts=True)
+        cluster_counts[patient_idx-1, unique] = counts
+
+    # Convert cluster counts to a DataFrame for easier visualization
+    cluster_counts_df = pd.DataFrame(cluster_counts, columns=[f"Cluster {i+1}" for i in range(n_clusters)],
+                                    index=[f"Patient {i+1}" for i in range(n_patients)])
+
+    # Display the cluster counts for each patient
+    print(cluster_counts_df)
+
+    # Optionally save the cluster labels for further analysis
+    np.save("UnsupResults/KMeansFor{}/cluster_labels.npy".format(n_clusters), cluster_labels)
+    cluster_counts_df.to_csv("UnsupResults/KMeansFor{}/cluster_counts.csv".format(n_clusters))
+    plotHistogram(n_patients, cluster_counts, cluster_counts_df, n_clusters)
+
+    return 0
+
+
+def loadPatientScaledData():
+    X_train = list()
+    patient_cell_num = list()
+    for root, dirs, files in os.walk('Data/DataInPatientsUmap'):
+        for file in files:
+            if 'npy' in file:
+                print('Proceeding {}...'.format(file))
+                numpy_data = np.load(os.path.join(root, file))
+                X_train.append(numpy_data)
+                patient_cell_num.append([int(file.split('_')[1]), numpy_data.shape[0]])
+
+    X_train = np.vstack((X_train))
+    scaler = StandardScaler()
+    data_scaled = scaler.fit_transform(X_train)
+    return data_scaled, patient_cell_num
+
+def plotHistogram(n_patients, cluster_counts, cluster_counts_df, n_clusters=3):
+    patient_id = np.random.randint(0, n_patients)  # Random patient
+    plt.bar(range(n_clusters), cluster_counts[patient_id])
+    plt.xlabel('Cluster')
+    plt.ylabel('Number of Cells')
+    plt.title(f'Cluster Distribution for Patient {patient_id + 1}')
+    plt.savefig('UnsupResults/KMeansFor{}/ClusterDistributionForPatient.png'.format(n_clusters), dpi=600)
+
     circos = Circos.initialize_from_matrix(
-        co_occurrence_df,
+        cluster_counts_df,
         space=2,
         r_lim=(93, 100),
-        cmap="tab10",
-        ticks_interval=100000,
-        label_kws=dict(r=94, size=12, color="white"),
-    )
-
-    # Plot the Chord Diagram
+        cmap="tab20",
+        # ticks_interval=100000,
+        label_kws=dict(r=105, size=9, orientation='vertical', weight='bold', color="black"))
     fig = circos.plotfig()
-    plt.savefig('UnsupResults/Sajid/Chord_Diagram.png')
-    print('Step 5 finished.')
+    plt.savefig('UnsupResults/KMeansFor{}/ClusterDistributionForPatientCircos.png'.format(n_clusters), dpi=600)
+    plt.close()
+
+
+def CountClusterInCells(data_scaled, cluster_labels):
+    data = pd.DataFrame(data_scaled, columns=['UMAP1', 'UMAP2'])
+    data['Cluster'] = cluster_labels
+    cluster_proportions = data['Cluster'].value_counts(normalize=True).sort_index()
+
+    # Expected proportions (example values, adjust as needed)
+    expected_proportions = [0.60, 0.20, 0.20]  # Example proportions for the 3 clusters
+
+    # Calculate deviations from expected proportions
+    deviation_data = []
+    for cluster, proportion in enumerate(cluster_proportions):
+        deviation = abs(proportion - expected_proportions[cluster])
+        deviation_data.append({'Cluster': cluster, 'Deviation': deviation})
+
+    # Convert to DataFrame
+    deviation_df = pd.DataFrame(deviation_data)
+
+    # Step 5: Create a Manhattan Plot
+    plt.figure(figsize=(10, 6))
+
+    # Define colors for clusters
+    colors = sns.color_palette("husl", n_clusters)
+
+    # sns.scatterplot(
+    #     x='Cluster', 
+    #     y='Deviation', 
+    #     hue='Cluster', 
+    #     palette=colors, 
+    #     data=deviation_df, 
+    #     legend=None, 
+    #     s=100
+    # )
+
+    # # Add axis labels and title
+    # plt.xlabel('Cluster')
+    # plt.ylabel('Deviation from Expected Proportion')
+    # plt.title('Manhattan Plot of Cluster Deviations')
+
+    # # Highlight the expected proportions (optional)
+    # plt.axhline(y=0, color='grey', linestyle='--')
+
+    # plt.grid(True)
+    from matplotlib.collections import PathCollection
+    dm = pd.DataFrame(data_scaled)
+    ax = sns.violinplot(x= 'Cluster', y = 'Deviation', data = deviation_df)
+    for artist in ax.lines:
+        artist.set_zorder(10)
+    for artist in ax.findobj(PathCollection):
+        artist.set_zorder(11)
+
+    sns.stripplot(x="Cluster", y="Deviation", data= deviation_df, jitter=True, ax=ax)
+
+    plt.savefig('UnsupResults/KMeansFor3/ClusterDeviationInCells.png', dpi=600)
+
+
+
+if __name__ == '__main__':
+    client = Client()  # 创建Dask本地客户端
+
+    # Load your CSV file (your clean data)
+    data_scaled, patient_cell_num = loadPatientScaledData()
+
+    # Specify the features and the group column
+    features = ['UMAP1', 'UMAP2']
+    group_column = ['Label']
+    
+    
+    cluster_labels = KMeans(data_scaled, [17], draw=False)  # 聚类
+    n_clusters = max(cluster_labels)+1
+
+    CountClusterInPatient(data_scaled, cluster_labels, patient_cell_num)
+    # CountClusterInCells(data_scaled, cluster_labels)  # only use in K=3

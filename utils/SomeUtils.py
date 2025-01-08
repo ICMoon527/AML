@@ -72,7 +72,7 @@ def drawAnomaliesBySSC_A(points_2D, lower_limit, upper_limit):
     scatter = ax.scatter([x+1 for x in range(points_2D.shape[0])], points_2D[:, 0], c=color_str, s=10)
 
     # 设置标题和坐标轴标签，并调整字体大小和粗体显示
-    ax.set_title('Scatter Plot with Color Gradient', fontsize=16, fontweight='bold')
+    # ax.set_title('Scatter Plot with Color Gradient', fontsize=16, fontweight='bold')
     ax.set_xlabel('Time', fontsize=16, fontweight='bold')
     ax.set_ylabel('SSC-A', fontsize=16, fontweight='bold')
 
@@ -90,7 +90,7 @@ def drawAnomaliesBySSC_A(points_2D, lower_limit, upper_limit):
     ax.grid(False)  # 关闭网格线
 
     # 保存图像为高 DPI 格式的文件
-    plt.savefig('/home/ljw/Code/AML/PreprocessResults/SSC_A.png', dpi=600, bbox_inches='tight')
+    plt.savefig('/home/ljw/Code/AML/PreprocessResults/Time-SSCA.png', dpi=600, bbox_inches='tight')
     plt.close()
     return 0
 
@@ -130,7 +130,7 @@ def drawAnomaliesByFSC_AH(points_2D, lower_limit, upper_limit):
     scatter = ax.scatter(x=points_2D[:, 1], y=points_2D[:, 2], c=color_str, s=10)
 
     # 设置标题和坐标轴标签，并调整字体大小和粗体显示
-    ax.set_title('Scatter Plot with Color Gradient', fontsize=16, fontweight='bold')
+    # ax.set_title('Scatter Plot with Color Gradient', fontsize=16, fontweight='bold')
     ax.set_xlabel('FSC-A', fontsize=16, fontweight='bold')
     ax.set_ylabel('FSC-H', fontsize=16, fontweight='bold')
 
@@ -148,7 +148,7 @@ def drawAnomaliesByFSC_AH(points_2D, lower_limit, upper_limit):
     ax.grid(False)  # 关闭网格线
 
     # 保存图像为高 DPI 格式的文件
-    plt.savefig('/home/ljw/Code/AML/PreprocessResults/FSC.png', dpi=600, bbox_inches='tight')
+    plt.savefig('/home/ljw/Code/AML/PreprocessResults/FSC-A-FSC-H.png', dpi=600, bbox_inches='tight')
     plt.close()
     return 0
 
@@ -191,7 +191,7 @@ def drawPoints(points, lower_limit, upper_limit):
     scatter = ax.scatter(x=points.T[:, 1], y=points.T[:, 0], c=color_str, s=10)
 
     # 设置标题和坐标轴标签，并调整字体大小和粗体显示
-    ax.set_title('Scatter Plot with Color Gradient', fontsize=16, fontweight='bold')
+    # ax.set_title('Scatter Plot with Color Gradient', fontsize=16, fontweight='bold')
     ax.set_xlabel('FSC-A', fontsize=16, fontweight='bold')
     ax.set_ylabel('SSC-A', fontsize=16, fontweight='bold')
     ax.set_ylim(bottom=0, top=1000)

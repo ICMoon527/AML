@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+import os
 
 def ReduceDimensionUMAP():
 
@@ -16,7 +17,7 @@ def ReduceDimensionUMAP():
     X = X.transpose(0, 2, 1)  # (num, 10000, 15)
     X, Y = X.reshape((-1, X.shape[-1])), np.repeat(Y, repeats=10000)   ###############################
 
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, shuffle=True, random_state=np.random.seed(1234))  # 固定种子是个好习惯啊！
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, shuffle=False, random_state=np.random.seed(1234))  # 固定种子是个好习惯啊！
     print('训练集长度: {}, 测试集长度: {}'.format(len(X_train), len(X_test)))
     print(f"Data Shape: {X_train.shape}")
 
@@ -30,21 +31,27 @@ def ReduceDimensionUMAP():
     print(X_train.describe())
 
     # Step 3: Apply UMAP
-    min_dists = [0, 0.01, 0.05, 0.1, 0.5, 1]
-    n_neighbors = [5, 15, 30, 50, 100]
+    # min_dists = [0, 0.01, 0.05, 0.1, 0.5, 1]
+    # n_neighbors = [5, 15, 30, 50, 100]
+    min_dists = [0]
+    n_neighbors = [100]
     for min_dist in min_dists:
         for n_neighbor in n_neighbors:
-
-            if min_dist == 0:
-                if n_neighbor != 100:
-                    continue
-
             print('Now proceeding: n_neighbor {}, min_dist {}'.format(n_neighbor, min_dist))
 
             umap_reducer = umap.UMAP(n_neighbors=n_neighbor, min_dist=min_dist, n_components=2, random_state=42)
             significant_data = umap_reducer.fit_transform(X_train)
             np.save('Data/npyData/UMAP_Data_{}_{}.npy'.format(n_neighbor, str(min_dist).replace('.', '')), significant_data)
             print('Data/npyData/UMAP_Data_{}_{}.npy SAVED'.format(n_neighbor, str(min_dist).replace('.', '')))
+
+            # fit patient data
+            for root, dirs, files in os.walk('Data/DataInPatients'):
+                for file in files:
+                    if 'npy' in file:
+                        print('Proceeding {}...'.format(file))
+                        numpy_data = np.load(os.path.join(root, file)) / 1023.  # standarize
+                        transformed_data = umap_reducer.transform(numpy_data)
+                        np.save('Data/DataInPatientsUmap/{}'.format(file), transformed_data)
 
             # Step 4: Prepare UMAP plot with 1st and 2nd features
             umap_df = pd.DataFrame(significant_data, columns=['UMAP1', 'UMAP2'])
@@ -53,7 +60,7 @@ def ReduceDimensionUMAP():
             # # Step 5: Plot UMAP
             plt.figure(figsize=(8, 5))
             sns.scatterplot(x='UMAP1', y='UMAP2', hue='Label', data=umap_df, palette={0: 'blue', 1: 'green'}, s=50)
-            plt.savefig('UnsupResults/Sajid/UMAP_{}_{}.png'.format(n_neighbor, str(min_dist).replace('.', '')))
+            plt.savefig('UnsupResults/Sajid/UMAP_{}_{}.png'.format(n_neighbor, str(min_dist).replace('.', '')), dpi=600)
             print('UnsupResults/Sajid/UMAP_{}_{}.png SAVED'.format(n_neighbor, str(min_dist).replace('.', '')))
 
 def ReduceDimensionANOVA():
@@ -65,7 +72,7 @@ def ReduceDimensionANOVA():
     X = X.transpose(0, 2, 1)  # (num, 10000, 15)
     X, Y = X.reshape((-1, X.shape[-1])), np.repeat(Y, repeats=10000)   ###############################
 
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, shuffle=True, random_state=np.random.seed(1234))  # 固定种子是个好习惯啊！
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, shuffle=False, random_state=np.random.seed(1234))  # 固定种子是个好习惯啊！
     data = np.load('Data/npyData/UMAP_Data_100_0.npy')  # data(X_train) and Y_train
 
     # Specify the features and the group column
@@ -118,6 +125,6 @@ def ReduceDimensionANOVA():
 
 
 if __name__ == '__main__':
-    # ReduceDimensionUMAP()
-    reduced_data, reduced_patient_labels = ReduceDimensionANOVA()
-    print(reduced_data.shape, reduced_patient_labels.shape)
+    ReduceDimensionUMAP()
+    # reduced_data, reduced_patient_labels = ReduceDimensionANOVA()
+    # print(reduced_data.shape, reduced_patient_labels.shape)
