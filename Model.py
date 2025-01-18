@@ -200,38 +200,235 @@ class UDNN(nn.Module):
         )
 
 
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-np.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        return x + self.pe[:x.size(0), :]
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, embed_size, num_heads):
+        super(MultiHeadAttention, self).__init__()
+        self.embed_size = embed_size
+        self.num_heads = num_heads
+        self.head_dim = embed_size // num_heads
+
+        assert (
+            self.head_dim * num_heads == embed_size
+        ), "Embedding size needs to be divisible by heads"
+
+        self.values = nn.Linear(self.head_dim, self.head_dim, bias=False)
+        self.keys = nn.Linear(self.head_dim, self.head_dim, bias=False)
+        self.queries = nn.Linear(self.head_dim, self.head_dim, bias=False)
+        self.fc_out = nn.Linear(embed_size, embed_size)
+
+    def forward(self, values, keys, query, mask):
+        N = query.shape[0]
+        value_len, key_len, query_len = values.shape[1], keys.shape[1], query.shape[1]
+
+        # Split the embedding into self.num_heads different pieces
+        values = values.reshape(N, value_len, self.num_heads, self.head_dim)
+        keys = keys.reshape(N, key_len, self.num_heads, self.head_dim)
+        queries = query.reshape(N, query_len, self.num_heads, self.head_dim)
+
+        values = self.values(values)
+        keys = self.keys(keys)
+        queries = self.queries(queries)
+
+        # Scaled dot-product attention
+        energy = torch.einsum("nqhd,nkhd->nhqk", [queries, keys]) / (self.head_dim ** 0.5)
+
+        if mask is not None:
+            energy = energy.masked_fill(mask == 0, float("-1e20"))
+
+        attention = torch.softmax(energy, dim=-1)
+
+        out = torch.einsum("nhql,nlhd->nqhd", [attention, values]).reshape(
+            N, query_len, self.embed_size
+        )
+
+        out = self.fc_out(out)
+        return out
+
+class TransformerBlock(nn.Module):
+    def __init__(self, embed_size, num_heads, dropout, forward_expansion):
+        super(TransformerBlock, self).__init__()
+        self.attention = MultiHeadAttention(embed_size, num_heads)
+        self.norm1 = nn.LayerNorm(embed_size)
+        self.norm2 = nn.LayerNorm(embed_size)
+        self.dropout = nn.Dropout(dropout)
+
+        self.feed_forward = nn.Sequential(
+            nn.Linear(embed_size, forward_expansion * embed_size),
+            nn.ReLU(),
+            nn.Linear(forward_expansion * embed_size, embed_size),
+        )
+
+    def forward(self, value, key, query, mask):
+        attention = self.attention(value, key, query, mask)
+        x = self.dropout(self.norm1(attention + query))
+        forward = self.feed_forward(x)
+        out = self.dropout(self.norm2(forward + x))
+        return out
+
+class TransformerEncoder(nn.Module):
+    def __init__(
+        self,
+        feature_dim,  # 输入特征维度
+        embed_size,   # 嵌入维度
+        num_layers,
+        num_heads,
+        device,
+        forward_expansion,
+        dropout,
+        max_length,
+        chunk_size=128  # 每个块的最大长度
+    ):
+        super(TransformerEncoder, self).__init__()
+        self.embed_size = embed_size
+        self.device = device
+        
+        # 如果输入特征维度与嵌入维度不同，则添加线性投影层
+        if feature_dim != embed_size:
+            self.projection = nn.Linear(feature_dim, embed_size)
+        else:
+            self.projection = nn.Identity()  # 如果相同，则直接传递
+
+        self.position_embedding = PositionalEncoding(embed_size, max_length)
+
+        self.layers = nn.ModuleList(
+            [TransformerBlock(embed_size, num_heads, dropout, forward_expansion) for _ in range(num_layers)]
+        )
+
+        self.dropout = nn.Dropout(dropout)
+        self.chunk_size = chunk_size
+
+    def forward(self, x, mask=None):
+        N, seq_length, feature_dim = x.shape
+        out = self.projection(x)  # 应用线性投影
+        out = self.position_embedding(out)
+
+        # 分块处理
+        chunks = []
+        for i in range(0, seq_length, self.chunk_size):
+            chunk = out[:, i:i+self.chunk_size]
+            chunk_mask = mask[:, :, i:i+self.chunk_size, i:i+self.chunk_size] if mask is not None else None
+            
+            # 通过每一层 Transformer Block
+            for layer in self.layers:
+                chunk = layer(chunk, chunk, chunk, chunk_mask)
+            
+            chunks.append(chunk)
+
+        # 将所有块重新组合成一个张量
+        out = torch.cat(chunks, dim=1)
+
+        return out
+
+
+class Classifier(nn.Module):
+    def __init__(self, seq_length, embed_size, num_classes=2):
+        super(Classifier, self).__init__()
+        self.flatten = nn.Flatten(start_dim=1)  # 展平除了 batch 维度以外的所有维度
+        self.fc = nn.Linear(seq_length * embed_size, 512)  # 第一个全连接层
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(0.5)
+        self.classifier = nn.Linear(512, num_classes)  # 分类层
+
+    def forward(self, x):
+        x = self.flatten(x)
+        x = self.fc(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+        x = self.classifier(x)
+        return x
+
+
+# 定义完整的模型
+class FullModel(nn.Module):
+    def __init__(
+        self,
+        feature_dim,
+        embed_size,
+        num_layers,
+        num_heads,
+        device,
+        forward_expansion,
+        dropout,
+        max_length,
+        seq_length,
+        num_classes=2,
+        chunk_size=128
+    ):
+        super(FullModel, self).__init__()
+        self.encoder = TransformerEncoder(
+            feature_dim,
+            embed_size,
+            num_layers,
+            num_heads,
+            device,
+            forward_expansion,
+            dropout,
+            max_length,
+            chunk_size
+        )
+        self.classifier = Classifier(seq_length, embed_size, num_classes)
+
+    def forward(self, x, mask=None):
+        x = self.encoder(x, mask)
+        x = self.classifier(x)
+        return x
+
+
+def create_padding_mask(seq, pad_token=0):
+    mask = (seq != pad_token).unsqueeze(1).unsqueeze(2)  # (batch_size, 1, 1, seq_len)
+    return mask.to(dtype=torch.float32)
+
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, choices=['SVM', 'DNN', 'ATTDNN'], default='DNN')
-    parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--batchsize", type=int, default=10240)  # 486400
-    parser.add_argument("--epochs", type=int, default=200)
-    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else 'cpu', choices=["cpu", "cuda"])
-    parser.add_argument('--optimizer', default='Adam', type=str, choices=['SGD','Adam','Adamax'])
-    parser.add_argument('--save_dir', default='./Results', type=str)
-    parser.add_argument('--nonlin', default="elu", type=str, choices=["relu", "elu", "softplus"])
-    parser.add_argument('--weight_decay', default=5e-4, type=float, help='coefficient for weight decay')
-    parser.add_argument('-deterministic', '--deterministic', dest='deterministic', action='store_true',
-                       help='fix random seeds and set cuda deterministic')
-    parser.add_argument('--warmup_steps', default=10, type=int)
-    parser.add_argument('--warmup_start_lr', default=1e-5, type=float)
-    parser.add_argument('--power', default=0.5, type=float)
-    parser.add_argument('-batchnorm', '--batchnorm', action='store_true')
-    parser.add_argument('--dropout_rate', default=0., type=float)
-    parser.add_argument('--nClasses', default=79, type=int)
-    parser.add_argument('--initial_dim', default=256, type=int)
+    # 参数设置
+    feature_dim = 2  # 输入特征维度
+    embed_size = 256  # 模型内部使用的嵌入维度
+    num_layers = 6
+    num_heads = 8  # 注意力头数必须能够整除 embed_size
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    forward_expansion = 4
+    dropout = 0.1
+    max_length = 9  # 输入序列的最大长度
+    seq_length = 9  # 输入序列的实际长度
+    chunk_size = 9  # 因为输入序列较短，这里设为等于序列长度
+    num_classes = 2  # 二分类任务
 
-    args = parser.parse_args()
-    args.device = torch.device('cuda')
+    # 初始化完整模型
+    model = FullModel(
+        feature_dim,
+        embed_size,
+        num_layers,
+        num_heads,
+        device,
+        forward_expansion,
+        dropout,
+        max_length,
+        seq_length,
+        num_classes,
+        chunk_size
+    ).to(device)
 
-    model = UDNN(args, 61, 79).to(args.device)
-    x = torch.rand(10, 61).to(args.device)
+    # 测试数据
+    x = torch.randn(2, seq_length, feature_dim).to(device)  # Example input tensor with shape (batch_size, seq_length, feature_dim)
+    mask = create_padding_mask(x.sum(dim=-1))  # 创建掩码，假设非零元素为有效
 
-    x.requires_grad_()
-    y = model(x)
-    # print(model)
-    print(y.size())
-    # target = torch.ones_like(y)
-    # loss = torch.nn.MSELoss()(y, target)
-    # print(loss)
-    # loss.backward()
+    # 调用模型
+    out = model(x, mask)
+    print(out.shape)  # 应该输出 [batch_size, num_classes]
+
+    # 打印输出以检查是否符合预期
+    print(out)
