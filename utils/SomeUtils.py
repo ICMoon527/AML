@@ -48,7 +48,7 @@ def draw_fig(args, data_list, name):
     plt.xlabel('epoch', fontsize=15)
     plt.ylabel(name.split('_')[-1], fontsize=15)
     plt.grid()
-    plt.savefig(args.save_dir+'/'+name+".png")
+    plt.savefig(args.save_dir+'/'+name+".png", dpi=600)
 
     # plt.show()
 

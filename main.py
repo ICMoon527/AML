@@ -17,11 +17,12 @@ import numpy as np
 from torch.autograd import Variable
 import torch.nn as nn
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5,6"
 # if torch.cuda.is_available():
 #     class_weights = class_weights.cuda()
 
-# criterion = nn.CrossEntropyLoss()
-criterion = FocalLoss.FocalLossV1()  # To the best results
+criterion = nn.CrossEntropyLoss()
+# criterion = FocalLoss.FocalLossV1()  # To the best results
 lr_list, test_accuracy_list = [], []
 best_acc = 0
 
@@ -61,6 +62,9 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
         
         if model_att is not None:
             inputs = model_att(inputs)  # 前面预训练网络的输出
+        # print(f"Model is on device: {next(model.parameters()).device}")
+        # print(f"Input tensor is on device: {inputs.device}")
+        # print(f"Target tensor is on device: {targets.device}")
         out = model(inputs)
         loss = criterion(out, F.one_hot(targets.long(), num_classes=args.nClasses).float()) # Loss for focal loss
         # loss = criterion(out, targets) # Loss for CE loss
@@ -180,14 +184,14 @@ def test(best_result, args, model, epoch, testloader, logger, model_att):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, choices=['SVM', 'DNN', 'ATTDNN', 'preDN', 'DNNATT', 'UDNN', 'Resume', 'Transformer'], default='DNN')
+    parser.add_argument('--model', type=str, choices=['SVM', 'DNN', 'ATTDNN', 'preDN', 'DNNATT', 'UDNN', 'Resume', 'Transformer'], default='Transformer')
     parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--batchsize", type=int, default=128)
-    parser.add_argument("--length", type=int, default=10000)
+    parser.add_argument("--batchsize", type=int, default=1)
+    parser.add_argument("--length", type=int, default=1000)
     parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--optimizer', default='Adam', type=str, choices=['SGD','Adam','Adamax'])
-    parser.add_argument('--save_dir', default='./Results/DNN', type=str)
+    parser.add_argument('--save_dir', default='./Results/UMAP_Results', type=str)
     parser.add_argument('--nonlin', default="elu", type=str, choices=["relu", "elu", "softplus", 'sigmoid'])
     parser.add_argument('--weight_decay', default=0., type=float, help='coefficient for weight decay')
     parser.add_argument('-deterministic', '--deterministic', dest='deterministic', action='store_true',
@@ -201,13 +205,14 @@ if __name__ == '__main__':
     parser.add_argument('--input_droprate', default=0., type=float, help='the max rate of the detectors may fail')
     parser.add_argument('--initial_dim', default=256, type=int)
     parser.add_argument('--continueFile', default='./Results/79sources/DNN-Adam-0-3000-largerRange-focalLoss/bk.t7', type=str)
-    parser.add_argument('--dataset', default='Data/UsefulData', type=str, choices=['Data/UsefulData','Data/UsefulData002', 'Data/DataInPatientsUmap'])
+    parser.add_argument('--dataset', default='Data/DataInPatientsUmap', type=str, choices=['Data/UsefulData','Data/UsefulData002', 'Data/DataInPatientsUmap'])
     parser.add_argument('-train', '--train', action='store_true')
     parser.add_argument('--test_model_path', default='Results/DNN-notShuffle-dropout0d4/DNN_Adam_98.23_checkpoint.t7', type=str)
     parser.add_argument('-shuffle', '--shuffle', action='store_true')
-
+    parser.add_argument("--max_length", type=int, default=100000)
 
     args = parser.parse_args()
+    args.train = True
 
     if args.deterministic:  # 方便复现
         print('\033[31mModel Deterministic\033[0m')
@@ -232,55 +237,80 @@ if __name__ == '__main__':
     """
     # discard_protein_ID_list = [5, 6, 7, 11, 13, 14]
     # discard_protein_ID_list = [5, 6, 10, 12]
-    
-    discard_protein_ID_list = []
-    trainset = AMLDataset.AMLDataset(args, True, setZeroClassNum=discard_protein_ID_list)
-    testset = AMLDataset.AMLDataset(args, False, setZeroClassNum=discard_protein_ID_list)
-    if args.deterministic:
-        trainloader = DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=16, worker_init_fn=np.random.seed(1234))
-        testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=False, num_workers=16, worker_init_fn=np.random.seed(1234))
+    if args.dataset == 'Data/DataInPatientsUmap':
+        trainset = AMLDataset.AMLDataset(args, True)
+        testset = AMLDataset.AMLDataset(args, False)
+        if args.deterministic:
+            trainloader = DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=16, worker_init_fn=np.random.seed(1234))
+            testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=False, num_workers=16, worker_init_fn=np.random.seed(1234))
+        else:
+            trainloader = DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=16)
+            testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=False, num_workers=16)
     else:
-        trainloader = DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=16)
-        testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=False, num_workers=16)
+        discard_protein_ID_list = []
+        trainset = AMLDataset.AMLDataset(args, True, setZeroClassNum=discard_protein_ID_list)
+        testset = AMLDataset.AMLDataset(args, False, setZeroClassNum=discard_protein_ID_list)
+        if args.deterministic:
+            trainloader = DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=16, worker_init_fn=np.random.seed(1234))
+            testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=False, num_workers=16, worker_init_fn=np.random.seed(1234))
+        else:
+            trainloader = DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=16)
+            testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=False, num_workers=16)
 
     """
     Choose model
     """
-    feature_num_dic = {'Data/UsefulData': 15, 'Data/UsefulData002': 13}
-    input_charac_num = feature_num_dic[args.dataset] * args.length
-    nClasses = 2
-    model_att = None
-    if args.model == 'SVM':
-        model = Model.SVM(args, input_charac_num, nClasses)
-    elif args.model == 'DNN':
-        model = Model.DNN(args, input_charac_num, nClasses)
-    elif args.model == 'ATTDNN':
-        model = Model.ATTDNN(args, input_charac_num, nClasses)
-    elif args.model == 'UDNN':
-        model = Model.UDNN(args, input_charac_num, nClasses)
-    elif args.model == 'preDN':
-        # 预训练的恢复模型，接上分类模型DNN
-        # 检索最佳的恢复模型
-        recover_result = np.inf
-        files = os.listdir('./Results/Recover')
-        for file in files:
-            if 'DNN_' in file and 'Adam_' in file and 't7' in file:
-                recover_result = file.split('_')[-2] if float(file.split('_')[-2]) < float(recover_result) else recover_result
-        model_att_path = os.path.join('./Results/Recover', 'DNN_Adam_'+str(recover_result)+'_checkpoint.t7')
-        model_att = torch.load(model_att_path)['model']  # for recover original data
-        # print('\033[31mpretrained ATT model {}_checkpoint.t7 is loaded\033[0m'.format(recover_result))
-        model = Model.DNN(args, input_charac_num, nClasses)  # for classification
-    elif args.model == 'Resume':
-        # 断点恢复训练
-        file = torch.load(args.continueFile)
-        model, epoch, accuracy, optimizer = file['model'], file['epoch'], file['accuracy'], file['optimizer']
+    if args.dataset == 'Data/DataInPatientsUmap':
+        model = Model.FullModel(feature_dim=2,
+                                embed_size=32,
+                                num_layers=3,
+                                num_heads=2,
+                                device=args.device,
+                                forward_expansion=2,
+                                dropout=args.dropout_rate,
+                                max_length=args.max_length,  # 712047
+                                seq_length=args.max_length,
+                                num_classes=2,
+                                chunk_size=args.length
+                            )
+    else:
+        feature_num_dic = {'Data/UsefulData': 15, 'Data/UsefulData002': 13}
+        input_charac_num = feature_num_dic[args.dataset] * args.length
+        nClasses = 2
+        model_att = None
+        if args.model == 'SVM':
+            model = Model.SVM(args, input_charac_num, nClasses)
+        elif args.model == 'DNN':
+            model = Model.DNN(args, input_charac_num, nClasses)
+        elif args.model == 'ATTDNN':
+            model = Model.ATTDNN(args, input_charac_num, nClasses)
+        elif args.model == 'UDNN':
+            model = Model.UDNN(args, input_charac_num, nClasses)
+        elif args.model == 'preDN':
+            # 预训练的恢复模型，接上分类模型DNN
+            # 检索最佳的恢复模型
+            recover_result = np.inf
+            files = os.listdir('./Results/Recover')
+            for file in files:
+                if 'DNN_' in file and 'Adam_' in file and 't7' in file:
+                    recover_result = file.split('_')[-2] if float(file.split('_')[-2]) < float(recover_result) else recover_result
+            model_att_path = os.path.join('./Results/Recover', 'DNN_Adam_'+str(recover_result)+'_checkpoint.t7')
+            model_att = torch.load(model_att_path)['model']  # for recover original data
+            # print('\033[31mpretrained ATT model {}_checkpoint.t7 is loaded\033[0m'.format(recover_result))
+            model = Model.DNN(args, input_charac_num, nClasses)  # for classification
+        elif args.model == 'Resume':
+            # 断点恢复训练
+            file = torch.load(args.continueFile)
+            model, epoch, accuracy, optimizer = file['model'], file['epoch'], file['accuracy'], file['optimizer']
 
     if not args.train:
         # 单独测试
         file = torch.load(args.test_model_path)
         model, epoch, accuracy = file['model'], file['epoch'], file['accuracy']
 
-    model.to(args.device)
+    """
+    Move model to device
+    """
     if args.model == 'preDN':
         model_att.to(args.device)
 
@@ -289,6 +319,8 @@ if __name__ == '__main__':
             model_att = torch.nn.DataParallel(model_att, range(torch.cuda.device_count()))  # 并行
 
         model = torch.nn.DataParallel(model, range(torch.cuda.device_count()))  # 并行
+    model = model.to(args.device)
+    print(f"Model is on device: {next(model.parameters()).device}")
     cudnn.benchmark = True  # 统一输入大小的情况下能加快训练速度
 
     """
@@ -331,7 +363,7 @@ if __name__ == '__main__':
     for epoch in range(start_epoch+1, 1+args.epochs):
 
         start_time = time.time()
-        loss, accuracy = train(args, model, optimizer, epoch, trainloader, trainset, logger, model_att)
+        loss, accuracy = train(args, model, optimizer, epoch, trainloader, trainset, logger)
         epoch_time = time.time() - start_time
         elapsed_time += epoch_time
         logger.info('| Elapsed time : %d:%02d:%02d' % (SomeUtils.get_hms(elapsed_time)))

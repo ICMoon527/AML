@@ -3,6 +3,7 @@ from utils.ReadCSV import ReadCSV
 from sklearn.model_selection import train_test_split
 import numpy as np
 import torch
+from UnsupSajid import getPatientScaledDataXY
 
 class AMLDataset(Dataset):
     def __init__(self, args, isTrain=True, setZeroClassNum=None) -> None:
@@ -13,12 +14,16 @@ class AMLDataset(Dataset):
         '''
         读取数据, M2-粒细胞-0, M5-单细胞-1
         '''
-        object = ReadCSV()
-        X, Y = object.getDataset(args.dataset, length=args.length)
-        print('读取数据完成')
-        X, Y = self.preprocess(X, Y)  # (num, 10000, 15)
-        print('数据预处理（归一化）完成')
-        self.all_X, self.all_Y = X.reshape((-1, X.shape[-1])), Y
+        if args.dataset == 'Data/DataInPatientsUmap':
+            X, Y = getPatientScaledDataXY(max_length=args.max_length)
+            self.all_X, self.all_Y = X, Y
+        else:
+            object = ReadCSV()
+            X, Y = object.getDataset(args.dataset, length=args.length)
+            print('读取数据完成')
+            X, Y = self.preprocess(X, Y)  # (num, 10000, 15)
+            print('数据预处理（归一化）完成')
+            self.all_X, self.all_Y = X.reshape((-1, X.shape[-1])), Y
         
         self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(X, Y, test_size=0.2, shuffle=args.shuffle, random_state=np.random.seed(1234))
         # np.save('Data/npyData/X_train.npy', self.X_train)
@@ -69,7 +74,10 @@ class AMLDataset(Dataset):
 
         # random choose 51 sensors to be ZERO
         # x[self.fix_indices] = 0
-        return np.float32(x.flatten()), np.int32(y), np.float32(x_origin)  # 让类别从0开始
+        if not self.args.dataset == 'Data/DataInPatientsUmap':
+            return np.float32(x.flatten()), np.int32(y), np.float32(x_origin)  # 让类别从0开始
+        else:
+            return np.float32(x), np.float32(y), np.float32(x_origin)
 
     def __len__(self):
         return len(self.X)
@@ -206,7 +214,7 @@ if __name__ == '__main__':
     parser.add_argument('--input_droprate', default=0., type=float, help='the max rate of the detectors may fail')
     parser.add_argument('--initial_dim', default=256, type=int)
     parser.add_argument('--continueFile', default='./Results/79sources/DNN-Adam-0-3000-largerRange-focalLoss/bk.t7', type=str)
-    parser.add_argument('--dataset', default='Data/UsefulData', type=str, choices=['Data/UsefulData','Data/UsefulData002'])
+    parser.add_argument('--dataset', default='Data/DataInPatientsUmap', type=str, choices=['Data/UsefulData','Data/UsefulData002', 'Data/DataInPatientsUmap'])
     parser.add_argument('-train', '--train', action='store_true')
     parser.add_argument('--test_model_path', default='Results/DNN-notShuffle-dropout0d5/DNN_Adam_98.23_checkpoint.t7', type=str)
     parser.add_argument('-shuffle', '--shuffle', action='store_true')

@@ -181,6 +181,43 @@ def loadPatientScaledData():
     data_scaled = scaler.fit_transform(X_train)
     return data_scaled, patient_cell_num
 
+def getPatientScaledDataXY(max_length=100000):
+    X_train = list()
+    patient_cell_num = list()
+    Y_train = list()
+    Umap_1_max = -10000
+    Umap_1_min = 10000
+    Umap_2_max = -10000
+    Umap_2_min = 10000
+    for root, dirs, files in os.walk('Data/DataInPatientsUmap'):
+        for file in files:
+            if 'npy' in file:
+                print('Proceeding {}...'.format(file))
+                numpy_data = np.load(os.path.join(root, file))  # shape均值267000
+
+                Umap_1_max = Umap_1_max if Umap_1_max > np.max(numpy_data[:,0]) else np.max(numpy_data[:,0])
+                Umap_1_min = Umap_1_min if Umap_1_min < np.min(numpy_data[:,0]) else np.min(numpy_data[:,0])
+                Umap_2_max = Umap_2_max if Umap_2_max > np.max(numpy_data[:,1]) else np.max(numpy_data[:,1])
+                Umap_2_min = Umap_2_min if Umap_2_min < np.min(numpy_data[:,1]) else np.min(numpy_data[:,1])
+
+                patient_cell_num.append([int(file.split('_')[1]), numpy_data.shape[0]])
+                while numpy_data.shape[0] >= max_length:
+                    X_train.append(numpy_data[:max_length])
+                    numpy_data = numpy_data[max_length:]
+                if len(numpy_data) > 0:
+                    X_train.append(numpy_data)
+                
+                Y_train.append(int(file.split('_')[-1][0]))  # 0:M2, 1:M5
+
+    # standarize
+    for i in range(len(X_train)):
+        X_train[i][:,0] = (X_train[i][:,0]-Umap_1_min)/(Umap_1_max-Umap_1_min)
+        X_train[i][:,1] = (X_train[i][:,1]-Umap_2_min)/(Umap_2_max-Umap_2_min)
+        X_train[i] = torch.tensor(X_train[i])
+
+    X_train = torch.nn.utils.rnn.pad_sequence(X_train, batch_first=True, padding_value=0)
+    return np.array(X_train), np.array(Y_train)
+
 def plotHistogram(n_patients, cluster_counts, cluster_counts_df, n_clusters=3):
     patient_id = np.random.randint(0, n_patients)  # Random patient
     plt.bar(range(n_clusters), cluster_counts[patient_id])

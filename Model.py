@@ -337,17 +337,19 @@ class TransformerEncoder(nn.Module):
 class Classifier(nn.Module):
     def __init__(self, seq_length, embed_size, num_classes=2):
         super(Classifier, self).__init__()
+        self.seq_length = seq_length
+        self.embed_size = embed_size
         self.flatten = nn.Flatten(start_dim=1)  # 展平除了 batch 维度以外的所有维度
-        self.fc = nn.Linear(seq_length * embed_size, 512)  # 第一个全连接层
-        self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.5)
-        self.classifier = nn.Linear(512, num_classes)  # 分类层
+        # self.fc = nn.Linear(seq_length * embed_size, 512)  # 第一个全连接层
+        # self.relu = nn.ReLU()
+        # self.dropout = nn.Dropout(0.5)
+        self.classifier = nn.Linear(seq_length * embed_size, num_classes)  # 分类层
 
     def forward(self, x):
         x = self.flatten(x)
-        x = self.fc(x)
-        x = self.relu(x)
-        x = self.dropout(x)
+        # x = self.fc(x)
+        # x = self.relu(x)
+        # x = self.dropout(x)
         x = self.classifier(x)
         return x
 
