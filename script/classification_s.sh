@@ -2,20 +2,20 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6 ~/anaconda3/envs/taizhou/bin/python main.py \
 -train \
 --dataset Data/DataInPatientsUmap \
 --model Transformer \
---optimizer Adam \
---max_length 300000 \
---lr 1e-5 \
---warmup_steps 5 \
---warmup_start_lr 1e-7 \
+--optimizer Lion \
+--max_length 10000 \
+--lr 2e-6 \
+--warmup_steps 10 \
+--warmup_start_lr 1e-8 \
 --power 0.5 \
---batchsize 7 \
+--batchsize 200 \
 --length 1000 \
---epochs 300 \
+--epochs 500 \
 --device cuda \
 --nonlin elu \
 --save_dir ./Results/UMAP_Results \
---weight_decay 0. \
---dropout_rate 0.1 \
+--weight_decay 0.1 \
+--dropout_rate 0.5 \
 --input_droprate 0. \
 --test_model_path Results/DNN-notShuffle-dropout0d5/DNN_Adam_98.23_checkpoint.t7 \
 -deterministic

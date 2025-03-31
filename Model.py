@@ -31,12 +31,12 @@ class DNN(nn.Module):
             'softplus': nn.Softplus
         }[args.nonlin]
 
-        times = 8
+        times = 2
         self.layers.append(self.fullConnectedLayer(input_dim, output_dim*192*times, args.batchnorm))
-        self.layers.append(self.fullConnectedLayer(output_dim*192*times, output_dim*64*times, args.batchnorm))
-        self.layers.append(self.fullConnectedLayer(output_dim*64*times, output_dim*16*times, args.batchnorm))
+        self.layers.append(self.fullConnectedLayer(output_dim*192*times, output_dim*48*times, args.batchnorm))
+        self.layers.append(self.fullConnectedLayer(output_dim*48*times, output_dim*12*times, args.batchnorm))
         # self.layers.append(nn.Linear(input_dim/4, output_dim*256))
-        self.layers.append(nn.Linear(output_dim*16*times, output_dim))
+        self.layers.append(nn.Linear(output_dim*12*times, output_dim))
 
         self.model = nn.Sequential(*self.layers)
 
@@ -310,11 +310,12 @@ class TransformerEncoder(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
         self.chunk_size = chunk_size
+        self.attention_pooling = AttentionPooling(embed_size)
 
     def forward(self, x, mask=None):
         N, seq_length, feature_dim = x.shape
         out = self.projection(x)  # 应用线性投影
-        out = self.position_embedding(out)
+        # out = self.position_embedding(out)
 
         # 分块处理
         chunks = []
@@ -330,6 +331,8 @@ class TransformerEncoder(nn.Module):
 
         # 将所有块重新组合成一个张量
         out = torch.cat(chunks, dim=1)
+
+        pooled_output = self.attention_pooling(out)
 
         return out
 
@@ -393,6 +396,21 @@ class FullModel(nn.Module):
 def create_padding_mask(seq, pad_token=0):
     mask = (seq != pad_token).unsqueeze(1).unsqueeze(2)  # (batch_size, 1, 1, seq_len)
     return mask.to(dtype=torch.float32)
+
+class AttentionPooling(nn.Module):
+    def __init__(self, embed_size):
+        super(AttentionPooling, self).__init__()
+        self.embed_size = embed_size
+        self.query = nn.Parameter(torch.randn(embed_size))  # 可学习的查询向量
+
+    def forward(self, x):
+        # x: (batch_size, seq_length, embed_size)
+        # 计算注意力分数
+        attention_scores = torch.matmul(x, self.query) / (self.embed_size ** 0.5)  # (batch_size, seq_length)
+        attention_weights = torch.softmax(attention_scores, dim=-1)  # (batch_size, seq_length)
+        # 加权求和
+        pooled_output = torch.sum(x * attention_weights.unsqueeze(-1), dim=1)  # (batch_size, embed_size)
+        return pooled_output
 
 
 if __name__ == '__main__':

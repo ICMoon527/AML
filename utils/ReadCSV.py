@@ -357,6 +357,8 @@ class ReadCSV():  # 2285 * 15
                                 print('ERROR')
                                 exit()
                     np.save('Data/DataInPatients/Patient_{}_type_{}.npy'.format(patient_ID, 0 if 'M2' in file else 1), numpy_data.T)
+                    # print('File name: ', file, 'Saved as:', 'Data/DataInPatients/Patient_{}_type_{}.npy'.format(patient_ID, 0 if 'M2' in file else 1))
+                    # input()
                     patient_ID += 1
         
         # 保存一下根据医学知识预处理过的数据

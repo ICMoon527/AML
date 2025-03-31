@@ -201,13 +201,16 @@ def getPatientScaledDataXY(max_length=100000):
                 Umap_2_min = Umap_2_min if Umap_2_min < np.min(numpy_data[:,1]) else np.min(numpy_data[:,1])
 
                 patient_cell_num.append([int(file.split('_')[1]), numpy_data.shape[0]])
+                # 截长补短
                 while numpy_data.shape[0] >= max_length:
                     X_train.append(numpy_data[:max_length])
+                    Y_train.append(int(file.split('_')[-1][0]))  # 0:M2, 1:M5
                     numpy_data = numpy_data[max_length:]
                 if len(numpy_data) > 0:
                     X_train.append(numpy_data)
+                    Y_train.append(int(file.split('_')[-1][0]))  # 0:M2, 1:M5
                 
-                Y_train.append(int(file.split('_')[-1][0]))  # 0:M2, 1:M5
+                # Y_train.append(int(file.split('_')[-1][0]))  # 0:M2, 1:M5
 
     # standarize
     for i in range(len(X_train)):

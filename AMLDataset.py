@@ -1,6 +1,6 @@
 from torch.utils.data import Dataset
 from utils.ReadCSV import ReadCSV
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedKFold
 import numpy as np
 import torch
 from UnsupSajid import getPatientScaledDataXY
@@ -15,21 +15,22 @@ class AMLDataset(Dataset):
         读取数据, M2-粒细胞-0, M5-单细胞-1
         '''
         if args.dataset == 'Data/DataInPatientsUmap':
-            X, Y = getPatientScaledDataXY(max_length=args.max_length)
-            self.all_X, self.all_Y = X, Y
+            X, Y = getPatientScaledDataXY(max_length=args.max_length)  # 对齐，所以max_length调整成70000
+            
         else:
             object = ReadCSV()
             X, Y = object.getDataset(args.dataset, length=args.length)
             print('读取数据完成')
             X, Y = self.preprocess(X, Y)  # (num, 10000, 15)
             print('数据预处理（归一化）完成')
-            self.all_X, self.all_Y = X.reshape((-1, X.shape[-1])), Y
+            # self.all_X, self.all_Y = X.reshape((-1, X.shape[-1])), Y
         
-        self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(X, Y, test_size=0.2, shuffle=args.shuffle, random_state=np.random.seed(1234))
-        # np.save('Data/npyData/X_train.npy', self.X_train)
-        # np.save('Data/npyData/X_test.npy', self.X_test)
-        # np.save('Data/npyData/Y_train.npy', self.Y_train)
-        # np.save('Data/npyData/Y_test.npy', self.Y_test)
+        # self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(X, Y, test_size=0.2, shuffle=args.shuffle, random_state=np.random.seed(1234))
+        k_fold = StratifiedKFold(n_splits=10, shuffle=False)
+        for train_index, val_index in k_fold.split(X, Y):
+            self.X_train, self.X_test = X[train_index], X[val_index]
+            self.Y_train, self.Y_test = Y[train_index], Y[val_index]
+            break
         print('训练集长度: {}, 测试集长度: {}'.format(len(self.X_train), len(self.X_test)))
         
         if isTrain:
@@ -77,7 +78,10 @@ class AMLDataset(Dataset):
         if not self.args.dataset == 'Data/DataInPatientsUmap':
             return np.float32(x.flatten()), np.int32(y), np.float32(x_origin)  # 让类别从0开始
         else:
-            return np.float32(x), np.float32(y), np.float32(x_origin)
+            if self.args.model == 'Transformer':
+                return np.float32(x), np.float32(y), np.float32(x_origin)
+            else:
+                return np.float32(x.flatten()), np.int32(y), np.float32(x_origin)
 
     def __len__(self):
         return len(self.X)

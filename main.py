@@ -16,13 +16,15 @@ from utils import SomeUtils, FocalLoss
 import numpy as np
 from torch.autograd import Variable
 import torch.nn as nn
+from lion_pytorch import Lion
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts, ExponentialLR
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5,6"
 # if torch.cuda.is_available():
 #     class_weights = class_weights.cuda()
 
-criterion = nn.CrossEntropyLoss()
-# criterion = FocalLoss.FocalLossV1()  # To the best results
+# criterion = nn.CrossEntropyLoss()
+criterion = FocalLoss.FocalLossV1()  # To the best results
 lr_list, test_accuracy_list = [], []
 best_acc = 0
 
@@ -35,19 +37,21 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
 
     # update lr for this epoch
     # lr = SomeUtils.learning_rate(args.lr, epoch)  # 0.000005
-    lr = SomeUtils.learning_rate_2(epoch, args.warmup_steps, args.warmup_start_lr, args.epochs, args.lr, args.power)
+    # lr = SomeUtils.learning_rate_2(epoch, args.warmup_steps, args.warmup_start_lr, args.epochs, args.lr, args.power)
     # 专门针对超长epochs
-    if args.epochs>3000:
-        if epoch>3000:  # 收尾
-            lr = SomeUtils.learning_rate_2(3000, args.warmup_steps, args.warmup_start_lr, 3000, args.lr, args.power)
-        else:
-            lr = SomeUtils.learning_rate_2(epoch, args.warmup_steps, args.warmup_start_lr, 3000, args.lr, args.power)
-    SomeUtils.update_lr(optimizer, lr)
-    lr_list.append(lr)
+    # if args.epochs>3000:
+    #     if epoch>3000:  # 收尾
+    #         lr = SomeUtils.learning_rate_2(3000, args.warmup_steps, args.warmup_start_lr, 3000, args.lr, args.power)
+    #     else:
+    #         lr = SomeUtils.learning_rate_2(epoch, args.warmup_steps, args.warmup_start_lr, 3000, args.lr, args.power)
+    # SomeUtils.update_lr(optimizer, lr)
+    # lr_list.append(lr)
 
-    params = sum([np.prod(p.size()) for p in model.parameters()])
-    logger.info('|  Number of Trainable Parameters: ' + str(params))
-    logger.info('\n=> Training Epoch #%d, LR=%.8f' % (epoch, lr))
+    # 训练时对参数添加高斯噪声
+    # sigma = 0.01 * (0.99 ** epoch)  # 指数衰减
+    # for param in model.parameters():
+    #     if param.requires_grad:
+    #         param.data += sigma * torch.randn_like(param)
 
     for batch_idx, (inputs, targets, _) in enumerate(trainloader):
         # 处理batch内只有一个样本的异常情况，无法通过batchnorm
@@ -62,9 +66,7 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
         
         if model_att is not None:
             inputs = model_att(inputs)  # 前面预训练网络的输出
-        # print(f"Model is on device: {next(model.parameters()).device}")
-        # print(f"Input tensor is on device: {inputs.device}")
-        # print(f"Target tensor is on device: {targets.device}")
+
         out = model(inputs)
         loss = criterion(out, F.one_hot(targets.long(), num_classes=args.nClasses).float()) # Loss for focal loss
         # loss = criterion(out, targets) # Loss for CE loss
@@ -135,7 +137,7 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
 
     return loss.detach().item(), accuracy
 
-def test(best_result, args, model, epoch, testloader, logger, model_att):
+def test(best_result, args, model, epoch, testloader, logger, model_att=None):
     model.eval()
     correct = 0.
     total = 0
@@ -190,7 +192,7 @@ if __name__ == '__main__':
     parser.add_argument("--length", type=int, default=1000)
     parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else 'cpu')
-    parser.add_argument('--optimizer', default='Adam', type=str, choices=['SGD','Adam','Adamax'])
+    parser.add_argument('--optimizer', default='Adam', type=str, choices=['SGD','Adam','Adamax', 'Lion'])
     parser.add_argument('--save_dir', default='./Results/UMAP_Results', type=str)
     parser.add_argument('--nonlin', default="elu", type=str, choices=["relu", "elu", "softplus", 'sigmoid'])
     parser.add_argument('--weight_decay', default=0., type=float, help='coefficient for weight decay')
@@ -209,7 +211,7 @@ if __name__ == '__main__':
     parser.add_argument('-train', '--train', action='store_true')
     parser.add_argument('--test_model_path', default='Results/DNN-notShuffle-dropout0d4/DNN_Adam_98.23_checkpoint.t7', type=str)
     parser.add_argument('-shuffle', '--shuffle', action='store_true')
-    parser.add_argument("--max_length", type=int, default=100000)
+    parser.add_argument("--max_length", type=int, default=10000)
 
     args = parser.parse_args()
     args.train = True
@@ -261,18 +263,21 @@ if __name__ == '__main__':
     Choose model
     """
     if args.dataset == 'Data/DataInPatientsUmap':
-        model = Model.FullModel(feature_dim=2,
-                                embed_size=32,
-                                num_layers=3,
-                                num_heads=2,
-                                device=args.device,
-                                forward_expansion=2,
-                                dropout=args.dropout_rate,
-                                max_length=args.max_length,  # 712047
-                                seq_length=args.max_length,
-                                num_classes=2,
-                                chunk_size=args.length
-                            )
+        if args.model == 'Transformer':
+            model = Model.FullModel(feature_dim=2,
+                                    embed_size=32,
+                                    num_layers=3,
+                                    num_heads=2,
+                                    device=args.device,
+                                    forward_expansion=2,
+                                    dropout=args.dropout_rate,
+                                    max_length=args.max_length,  # 712047
+                                    seq_length=args.max_length,
+                                    num_classes=2,
+                                    chunk_size=args.length
+                                )
+        elif args.model == 'DNN':
+            model = Model.DNN(args, input_dim=2*args.max_length, output_dim=2)
     else:
         feature_num_dic = {'Data/UsefulData': 15, 'Data/UsefulData002': 13}
         input_charac_num = feature_num_dic[args.dataset] * args.length
@@ -332,10 +337,15 @@ if __name__ == '__main__':
         optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=args.weight_decay)
     elif args.optimizer == 'Adamax':
         optimizer = optim.Adamax(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    elif args.optimizer == 'Lion':
+        optimizer = Lion(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     
     if args.model == 'Resume':
         optimizer.load_state_dict(file['optimizer'])
 
+    
+    scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=50, eta_min=1e-10)
+    # scheduler = ExponentialLR(optimizer, gamma=0.9)
 
 ###############################################################################################
     """
@@ -360,7 +370,12 @@ if __name__ == '__main__':
     if args.model == 'Resume':
             start_epoch = file['epoch']
 
+
     for epoch in range(start_epoch+1, 1+args.epochs):
+        params = sum([np.prod(p.size()) for p in model.parameters()])
+        logger.info('|  Number of Trainable Parameters: ' + str(params))
+        logger.info('\n=> Training Epoch #%d, LR=%.8f' % (epoch, optimizer.param_groups[0]['lr']))
+        lr_list.append(optimizer.param_groups[0]['lr'])
 
         start_time = time.time()
         loss, accuracy = train(args, model, optimizer, epoch, trainloader, trainset, logger)
@@ -368,6 +383,7 @@ if __name__ == '__main__':
         elapsed_time += epoch_time
         logger.info('| Elapsed time : %d:%02d:%02d' % (SomeUtils.get_hms(elapsed_time)))
 
+        scheduler.step()
         loss_list.append(loss)
         accuracy_list.append(accuracy)  # train accuracy
 
@@ -375,13 +391,13 @@ if __name__ == '__main__':
     TEST
     """
     logger.info('='*20+'Testing Model'+'='*20)
-    new_best = test(best_result, args, model, epoch, testloader, logger, model_att)
+    new_best = test(best_result, args, model, epoch, testloader, logger)
 ###############################################################################################
 
     """
     画loss, accuracy图
     """
-    prefix = args.model + '_' + args.optimizer + '_'#  + str(args.lr) + '_'
+    prefix = args.model + '_' + args.optimizer + '_' + 'SKFold_10000' + '_'
     if new_best > best_result:  # accuracy
         SomeUtils.draw_fig(args, loss_list, prefix+'Train_Loss')
         SomeUtils.draw_fig(args, test_accuracy_list, prefix+'Test_Accuracy')
