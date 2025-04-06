@@ -266,8 +266,8 @@ if __name__ == '__main__':
         if args.model == 'Transformer':
             model = Model.FullModel(feature_dim=2,
                                     embed_size=32,
-                                    num_layers=3,
-                                    num_heads=2,
+                                    num_layers=4,
+                                    num_heads=4,
                                     device=args.device,
                                     forward_expansion=2,
                                     dropout=args.dropout_rate,

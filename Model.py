@@ -310,7 +310,7 @@ class TransformerEncoder(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
         self.chunk_size = chunk_size
-        self.attention_pooling = AttentionPooling(embed_size)
+        self.attention_pooling = FeatureAttentionPooling(embed_size)
 
     def forward(self, x, mask=None):
         N, seq_length, feature_dim = x.shape
@@ -332,7 +332,7 @@ class TransformerEncoder(nn.Module):
         # 将所有块重新组合成一个张量
         out = torch.cat(chunks, dim=1)
 
-        pooled_output = self.attention_pooling(out)
+        # pooled_output = self.attention_pooling(out)
 
         return out
 
@@ -346,7 +346,7 @@ class Classifier(nn.Module):
         # self.fc = nn.Linear(seq_length * embed_size, 512)  # 第一个全连接层
         # self.relu = nn.ReLU()
         # self.dropout = nn.Dropout(0.5)
-        self.classifier = nn.Linear(seq_length * embed_size, num_classes)  # 分类层
+        self.classifier = nn.Linear(embed_size * seq_length, num_classes)  # 分类层
 
     def forward(self, x):
         x = self.flatten(x)
@@ -411,6 +411,23 @@ class AttentionPooling(nn.Module):
         # 加权求和
         pooled_output = torch.sum(x * attention_weights.unsqueeze(-1), dim=1)  # (batch_size, embed_size)
         return pooled_output
+    
+class FeatureAttentionPooling(nn.Module):
+    def __init__(self, embed_size):
+        super().__init__()
+        # 可学习的特征级注意力参数
+        self.attention = nn.Sequential(
+            nn.Linear(embed_size, 1),  # 每个特征维度输出1个分数
+        )
+    
+    def forward(self, x):
+        """
+        输入: (batch_size, seq_length, embed_size)
+        输出: (batch_size, seq_length)
+        """
+        # 计算特征注意力权重 (batch_size, seq_length, embed_size) -> (batch_size, seq_length, 1)
+        pooled = self.attention(x)
+        return pooled
 
 
 if __name__ == '__main__':
