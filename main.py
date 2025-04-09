@@ -370,8 +370,19 @@ if __name__ == '__main__':
     if args.model == 'Resume':
             start_epoch = file['epoch']
 
-
+    current_lr = args.lr
     for epoch in range(start_epoch+1, 1+args.epochs):
+        # 在第3000个epoch时调整基础学习率
+        if epoch == 2500 or epoch == 4000 or epoch == 4900:
+            scheduler.T_cur = 0  # 重置当前周期内的epoch计数器
+            scheduler.T_i = scheduler.T_0  # 重置周期长度为初始值
+            # 修改调度器的初始学习率（减半）
+            for i, param_group in enumerate(optimizer.param_groups):
+                current_lr = current_lr * 0.5
+                scheduler.base_lrs[i] = current_lr  # 直接更新base_lrs
+                param_group['lr'] = scheduler.base_lrs[i]        # 立即生效
+            scheduler.last_epoch = epoch  # 更新调度器的全局epoch计数器
+
         params = sum([np.prod(p.size()) for p in model.parameters()])
         logger.info('|  Number of Trainable Parameters: ' + str(params))
         logger.info('\n=> Training Epoch #%d, LR=%.8f' % (epoch, optimizer.param_groups[0]['lr']))

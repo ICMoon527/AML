@@ -10,3 +10,5 @@ Results002/
 *.npy
 *.npz
 *.skops
+/Test
+/TestModelResults
