@@ -73,10 +73,11 @@ class ATTDNN(nn.Module):
         }[args.nonlin]
 
         self.layers.append(AttentionLayer(args, input_dim, args.nClasses*input_dim, args.nClasses))
-        self.layers.append(self.fullConnectedLayer(input_dim, 1024, args.batchnorm))
-        self.layers.append(self.fullConnectedLayer(1024, 2048, args.batchnorm))
-        self.layers.append(self.fullConnectedLayer(2048, 256, args.batchnorm))
-        self.layers.append(nn.Linear(256, output_dim))
+        # self.layers.append(self.fullConnectedLayer(input_dim, 1024, args.batchnorm))
+        # self.layers.append(self.fullConnectedLayer(1024, 2048, args.batchnorm))
+        # self.layers.append(self.fullConnectedLayer(2048, 256, args.batchnorm))
+        # self.layers.append(nn.Linear(256, output_dim))
+        self.layers.append(self.fullConnectedLayer(input_dim, output_dim, args.batchnorm))
 
         self.model = nn.Sequential(*self.layers)
 

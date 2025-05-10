@@ -1,14 +1,14 @@
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6 ~/anaconda3/envs/taizhou/bin/python main.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 ~/anaconda3/envs/pytorch/bin/python main.py \
 -train \
 --dataset Data/DataInPatientsUmap \
 --model Transformer \
 --optimizer Lion \
 --max_length 10000 \
---lr 1e-6 \
+--lr 1.4e-6 \
 --warmup_steps 10 \
 --warmup_start_lr 1e-8 \
 --power 0.5 \
---batchsize 150 \
+--batchsize 28 \
 --length 1000 \
 --epochs 5000 \
 --device cuda \

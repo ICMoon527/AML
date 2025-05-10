@@ -1,21 +1,22 @@
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6 ~/anaconda3/envs/taizhou/bin/python main.py \
+CUDA_VISIBLE_DEVICES=0,1,2,3 ~/anaconda3/envs/pytorch/bin/python main.py \
 -train \
---dataset Data/UsefulData002 \
---model DNN \
+--dataset Data/UsefulData \
+--model Transformer \
 --optimizer Adam \
 --lr 1e-3 \
 --warmup_steps 10 \
 --warmup_start_lr 1e-5 \
 --power 0.5 \
---batchsize 125 \
+--batchsize 8 \
 --length 10000 \
 --epochs 200 \
 --device cuda \
 --nonlin elu \
---save_dir ./Results002/NotShuffled \
+--save_dir ./Results/ATTDNN/ \
 --weight_decay 0. \
 --dropout_rate 0 \
 --input_droprate 0. \
 --test_model_path Results/DNN-notShuffle-dropout0d5/DNN_Adam_98.23_checkpoint.t7 \
 -deterministic \
--batchnorm
+-batchnorm \
+-shuffle

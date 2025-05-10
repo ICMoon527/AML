@@ -356,7 +356,7 @@ class ReadCSV():  # 2285 * 15
                             else:
                                 print('ERROR')
                                 exit()
-                    np.save('Data/DataInPatients/Patient_{}_type_{}.npy'.format(patient_ID, 0 if 'M2' in file else 1), numpy_data.T)
+                    # np.save('Data/DataInPatients/Patient_{}_type_{}.npy'.format(patient_ID, 0 if 'M2' in file else 1), numpy_data.T)
                     # print('File name: ', file, 'Saved as:', 'Data/DataInPatients/Patient_{}_type_{}.npy'.format(patient_ID, 0 if 'M2' in file else 1))
                     # input()
                     patient_ID += 1
@@ -375,5 +375,5 @@ if __name__ == '__main__':
     # object.findSameProteinAndSaveFile('Data/ExtractedCSV')
     # object.findSameProteinAndSaveFile('Data/ExtractedCSV')
     # object.readUseful(object.useful_data_folder+'002')
-    X, Y = object.getDataset('Data/UsefulData', readNpz=False)
+    X, Y = object.getDataset('Data/UsefulData002', readNpz=False)
     # print(X.shape, Y.shape, np.count_nonzero(Y==0), X.max())

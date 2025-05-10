@@ -55,8 +55,8 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
 
     for batch_idx, (inputs, targets, _) in enumerate(trainloader):
         # 处理batch内只有一个样本的异常情况，无法通过batchnorm
-        if inputs.size()[0] == 1:
-            continue
+        # if inputs.size()[0] == 1:
+        #     continue
 
         if args.device == torch.device('cuda'):
             inputs, targets = inputs.cuda(), targets.cuda()  # GPU settings
@@ -130,7 +130,7 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
             # 删掉之前的
             for root, dirs, files in os.walk(args.save_dir):
                 for file in files:
-                    if '.t7' in file:
+                    if '.t7' in file and 'best' not in file:
                         os.remove(os.path.join(root, file))
 
             torch.save(state, os.path.join(args.save_dir, prefix+'checkpoint.t7'))
@@ -152,6 +152,7 @@ def test(best_result, args, model, epoch, testloader, logger, model_att=None):
 
         if model_att is not None:
             inputs = model_att(inputs)
+        print(inputs.shape)
         out = model(inputs)  # (batch, nClasses)
         _, predicted = torch.max(out.detach(), 1)
         correct += predicted.eq(targets.detach()).sum().item()
@@ -283,6 +284,19 @@ if __name__ == '__main__':
         input_charac_num = feature_num_dic[args.dataset] * args.length
         nClasses = 2
         model_att = None
+        if args.model == 'Transformer':
+            model = Model.FullModel(feature_dim=feature_num_dic[args.dataset],
+                                    embed_size=16,
+                                    num_layers=2,
+                                    num_heads=2,
+                                    device=args.device,
+                                    forward_expansion=1,
+                                    dropout=args.dropout_rate,
+                                    max_length=args.max_length,
+                                    seq_length=args.max_length,
+                                    num_classes=2,
+                                    chunk_size=args.length
+                                )
         if args.model == 'SVM':
             model = Model.SVM(args, input_charac_num, nClasses)
         elif args.model == 'DNN':

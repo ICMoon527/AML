@@ -17,6 +17,7 @@ import os
 import tqdm
 from dask.distributed import Client, progress
 import dask
+from dask import delayed
 import dask.array as da
 from pycirclize import Circos
 import seaborn as sns
@@ -25,16 +26,20 @@ import joblib
 def parallel_silhouette_score(data, labels, batch_size=10000):
     n_samples = len(data)
     batches = [slice(i, min(i + batch_size, n_samples)) for i in range(0, n_samples, batch_size)]
-    # 定义延迟任务
-    tasks = [dask.delayed(silhouette_samples)(data[slice_obj], labels[slice_obj]) for slice_obj in batches]
-    # 执行所有任务
-    results = dask.compute(*tasks)
-    # 将结果拼接成一个数组
-    all_scores = np.concatenate(results)
-    # 计算平均轮廓系数
-    silhouette_avg = np.mean(all_scores)
     
-    return silhouette_avg
+    # 定义延迟任务（使用 @delayed 装饰器）
+    @delayed
+    def process_batch(slice_obj):
+        return silhouette_samples(data[slice_obj], labels[slice_obj])
+    
+    # 并行计算所有分块
+    tasks = [process_batch(slice_obj) for slice_obj in batches]
+    results = dask.compute(*tasks)  # 触发并行执行
+    
+    # 合并结果并计算平均值
+    all_scores = np.concatenate(results)
+    return np.mean(all_scores)
+
 
 def parallel_calinski_harabasz_score(dask_data, labels):
     dask_data = dask.array.from_array(dask_data, chunks=(100000, -1))
@@ -90,7 +95,7 @@ def KMeans(X_train, K, draw=False):
         Model = MiniBatchKMeans(n_clusters=k, n_init='auto', verbose=1, batch_size=100000)
         Model.fit(X_train)
         # 保存模型
-        joblib.dump(Model, 'UnsupResults/KMeansFor{}/kmeans_model.skops'.format(k))
+        # joblib.dump(Model, 'UnsupResults/KMeansFor{}/kmeans_model.skops'.format(k))
 
         if len(K) == 1:
             if draw:
@@ -99,35 +104,37 @@ def KMeans(X_train, K, draw=False):
             return Model.labels_
 
         #计算各个样本到其所在簇类中心欧式距离(保存到各簇类中心的距离的最小值)
-        distortions.append(sum(np.min(cdist(X_train, Model.cluster_centers_, 'euclidean'), axis=1)) / X_train.shape[0])
-        sses.append(Model.inertia_)
-        silhouette_scores.append(parallel_silhouette_score(X_train, Model.labels_))
-        calinski_harabasz_scores.append(parallel_calinski_harabasz_score(X_train, Model.labels_))
-        davies_bouldin_scores.append(parallel_davies_bouldin_score(X_train, Model.labels_))
+        # distortions.append(sum(np.min(cdist(X_train, Model.cluster_centers_, 'euclidean'), axis=1)) / X_train.shape[0])
+        # sses.append(Model.inertia_)
+        silhouette_scores.append(silhouette_score(X_train, Model.labels_))
+        # calinski_harabasz_scores.append(parallel_calinski_harabasz_score(X_train, Model.labels_))
+        # davies_bouldin_scores.append(parallel_davies_bouldin_score(X_train, Model.labels_))
 
-    plt.plot(K, sses, label='WCSS', marker='o', linestyle='-', linewidth=1)
-    plt.xlabel('optimal K')
-    plt.ylabel('WCSS')
-    plt.savefig('UnsupResults/KMeans/2-20.png')
-    plt.close()
+        print('silhouette score list: ', silhouette_scores)
+
+    # plt.plot(K, sses, label='WCSS', marker='o', linestyle='-', linewidth=1)
+    # plt.xlabel('optimal K')
+    # plt.ylabel('WCSS')
+    # plt.savefig('UnsupResults/KMeans/2-20.png')
+    # plt.close()
 
     plt.plot(K, silhouette_scores, label='silhouette', marker='o', linestyle='-', linewidth=1)
     plt.xlabel('optimal K')
     plt.ylabel('silhouette_score')
-    plt.savefig('UnsupResults/KMeans/2-20_silhouette_score.png')
+    plt.savefig('UnsupResults/KMeans/2-30_silhouette_score.png')
     plt.close()
 
-    plt.plot(K, calinski_harabasz_scores, label='calinski_harabasz', marker='o', linestyle='-', linewidth=1)
-    plt.xlabel('optimal K')
-    plt.ylabel('calinski_harabasz_score')
-    plt.savefig('UnsupResults/KMeans/2-20_calinski_harabasz_score.png')
-    plt.close()
+    # plt.plot(K, calinski_harabasz_scores, label='calinski_harabasz', marker='o', linestyle='-', linewidth=1)
+    # plt.xlabel('optimal K')
+    # plt.ylabel('calinski_harabasz_score')
+    # plt.savefig('UnsupResults/KMeans/2-20_calinski_harabasz_score.png')
+    # plt.close()
 
-    plt.plot(K, davies_bouldin_scores, label='davies_bouldin', marker='o', linestyle='-', linewidth=1)
-    plt.xlabel('optimal K')
-    plt.ylabel('davies_bouldin_score')
-    plt.savefig('UnsupResults/KMeans/2-20_davies_bouldin_score.png')
-    plt.close()
+    # plt.plot(K, davies_bouldin_scores, label='davies_bouldin', marker='o', linestyle='-', linewidth=1)
+    # plt.xlabel('optimal K')
+    # plt.ylabel('davies_bouldin_score')
+    # plt.savefig('UnsupResults/KMeans/2-20_davies_bouldin_score.png')
+    # plt.close()
 
 
 def CountClusterInPatient(data_scaled, cluster_labels, patient_cell_num):
@@ -308,7 +315,8 @@ if __name__ == '__main__':
     group_column = ['Label']
     
     
-    cluster_labels = KMeans(data_scaled, [17], draw=False)  # 聚类
+    cluster_labels = KMeans(data_scaled[::100], range(2, 30), draw=False)  # 聚类
+    exit()
     n_clusters = max(cluster_labels)+1
 
     CountClusterInPatient(data_scaled, cluster_labels, patient_cell_num)
