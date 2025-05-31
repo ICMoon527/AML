@@ -38,19 +38,42 @@ def draw_fig(args, data_list, name):
     import matplotlib
     matplotlib.use('Agg')  # FIX: tkinter.TclError: couldn't connect to display "localhost:11.0" 
     import matplotlib.pyplot as plt
-    x1 = range(1, args.epochs+1)
+    x1 = range(args.val_delta, args.epochs+1, args.val_delta)
     y1 = data_list
 
     plt.cla()
     plt.title(name.split('_')[-1]+' vs. epoch', fontsize=15)
     # plt.plot(x1, y1, '.-')
-    plt.plot(x1, y1)
+    plt.plot(x1, y1[args.val_delta-1::args.val_delta])
     plt.xlabel('epoch', fontsize=15)
     plt.ylabel(name.split('_')[-1], fontsize=15)
     plt.grid()
-    plt.savefig(args.save_dir+'/'+name+".png", dpi=600)
+    plt.savefig(args.save_dir+'/'+name+".png", dpi=900)
 
     # plt.show()
+
+def draw_train_test(args, train_list, test_list, name):
+    plt.figure(figsize=(10, 5))
+    
+    epochs = range(args.val_delta, args.epochs+1, args.val_delta)
+    plt.plot(epochs, train_list[args.val_delta-1::args.val_delta], 'b-', label='Train Loss')
+    plt.plot(epochs, test_list[args.val_delta-1::args.val_delta], 'r-', label='Test Loss')
+    
+    # 美化图形
+    plt.title('Training & Test Loss')
+    plt.xlabel('Epochs', fontsize=15)
+    plt.ylabel('Loss', fontsize=15)
+    plt.legend()
+    plt.grid(True)
+    
+    # 自动调整y轴范围
+    max_loss = max(max(train_list), max(test_list))
+    plt.ylim(0, max_loss * 1.1)
+    
+    # 保存图片
+    plt.savefig(args.save_dir+'/'+name+".png", dpi=900)
+    plt.close()  # 关闭图形避免内存泄漏
+    return 0
 
 def try_make_dir(d):
     if not os.path.exists(d):

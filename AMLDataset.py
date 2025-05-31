@@ -15,7 +15,7 @@ class AMLDataset(Dataset):
         读取数据, M2-粒细胞-0, M5-单细胞-1
         '''
         if args.dataset == 'Data/DataInPatientsUmap':
-            X, Y = getPatientScaledDataXY(max_length=args.max_length)  # 对齐，所以max_length调整成70000
+            X, Y, patient_cell_num = getPatientScaledDataXY(max_length=args.max_length)  # 对齐，所以max_length调整成70000
             
         else:
             object = ReadCSV()
@@ -25,12 +25,12 @@ class AMLDataset(Dataset):
             print('数据预处理（归一化）完成, X size:', X.shape)
             # self.all_X, self.all_Y = X.reshape((-1, X.shape[-1])), Y
         
-        self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(X, Y, test_size=0.2, shuffle=args.shuffle, random_state=np.random.seed(1234))
-        # k_fold = StratifiedKFold(n_splits=10, shuffle=False)
-        # for train_index, val_index in k_fold.split(X, Y):
-        #     self.X_train, self.X_test = X[train_index], X[val_index]
-        #     self.Y_train, self.Y_test = Y[train_index], Y[val_index]
-        #     break
+        # self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(X, Y, test_size=0.2, shuffle=args.shuffle, random_state=np.random.seed(1234))
+        k_fold = StratifiedKFold(n_splits=5, shuffle=False)
+        for train_index, val_index in k_fold.split(X, Y):
+            self.X_train, self.X_test = X[train_index], X[val_index]
+            self.Y_train, self.Y_test = Y[train_index], Y[val_index]
+            break
         print('{}-训练集长度: {}, 测试集长度: {}, M5个数: {}, 测试集M5个数: {}'.format(args.dataset, len(self.X_train), len(self.X_test), np.sum(Y), np.sum(self.Y_test)))
         
         if isTrain:

@@ -19,8 +19,53 @@ from torch.autograd import Variable
 import torch.nn as nn
 import pandas as pd
 from matplotlib import pyplot as plt
+from torch.utils.data import Dataset
+from sklearn.model_selection import train_test_split, StratifiedKFold
 
 AUC_dic = {}
+
+def getPatientScaledDataXY(max_length=10000):
+    X_train = list()
+    patient_cell_num = list()
+    Y_train = list()
+    Umap_1_max = -10000
+    Umap_1_min = 10000
+    Umap_2_max = -10000
+    Umap_2_min = 10000
+    for root, dirs, files in os.walk('Data/DataInPatientsUmap'):
+        for file in files:
+            if 'npy' in file:
+                print('Proceeding {}...'.format(file))
+                numpy_data = np.load(os.path.join(root, file))  # shape均值267000
+
+                Umap_1_max = Umap_1_max if Umap_1_max > np.max(numpy_data[:,0]) else np.max(numpy_data[:,0])
+                Umap_1_min = Umap_1_min if Umap_1_min < np.min(numpy_data[:,0]) else np.min(numpy_data[:,0])
+                Umap_2_max = Umap_2_max if Umap_2_max > np.max(numpy_data[:,1]) else np.max(numpy_data[:,1])
+                Umap_2_min = Umap_2_min if Umap_2_min < np.min(numpy_data[:,1]) else np.min(numpy_data[:,1])
+
+                cell_group_num = 0
+                # 截长补短
+                while numpy_data.shape[0] >= max_length:
+                    X_train.append(numpy_data[:max_length])
+                    Y_train.append(int(file.split('_')[-1][0]))  # 0:M2, 1:M5
+                    numpy_data = numpy_data[max_length:]
+                    cell_group_num += 1
+                if len(numpy_data) > 0:
+                    X_train.append(numpy_data)
+                    Y_train.append(int(file.split('_')[-1][0]))  # 0:M2, 1:M5
+                    cell_group_num += 1
+                
+                patient_cell_num.append(cell_group_num)
+
+    # standarize
+    for i in range(len(X_train)):
+        X_train[i][:,0] = (X_train[i][:,0]-Umap_1_min)/(Umap_1_max-Umap_1_min)
+        X_train[i][:,1] = (X_train[i][:,1]-Umap_2_min)/(Umap_2_max-Umap_2_min)
+        X_train[i] = torch.tensor(X_train[i])
+
+    X_train = torch.nn.utils.rnn.pad_sequence(X_train, batch_first=True, padding_value=0)
+    return np.array(X_train), np.array(Y_train), patient_cell_num
+
 def test(best_result, args, model, epoch, testloader, logger, model_att=None, discard_protein_name=None, color_num=-1):
     model.eval()
     correct = 0.
@@ -98,9 +143,67 @@ def test(best_result, args, model, epoch, testloader, logger, model_att=None, di
     else:
         logger.info('\n| Not best... {:.4f} < {:.4f}'.format(accuracy, best_result))
 
-    return accuracy, auc
+    return accuracy, auc, predicted_list, target_list
 
 
+class AMLDataset(Dataset):
+    def __init__(self, args, isTrain=True, groupThreshold=20) -> None:
+        super(AMLDataset, self).__init__()
+        self.args = args
+        self.isTrain = isTrain
+
+        '''
+        读取数据, M2-粒细胞-0, M5-单细胞-1
+        '''
+        X, Y, patient_cell_num = getPatientScaledDataXY(max_length=args.max_length)  # 对齐，所以max_length调整成70000
+        
+        patients_num = len(patient_cell_num)
+        skip_num = 0
+        train_patient_num = patients_num//5*4
+        for i in range(train_patient_num):
+            skip_num += patient_cell_num[i]
+
+        new_X, new_Y = [], []
+        for i in range(patients_num - train_patient_num):
+            patient_data_X = X[skip_num: skip_num+patient_cell_num[train_patient_num+i]]
+            patient_data_Y = Y[skip_num: skip_num+patient_cell_num[train_patient_num+i]]
+            skip_num += len(patient_data_X)
+            patient_data_X = patient_data_X[:-1]
+            patient_data_Y = patient_data_Y[:-1]
+            if patient_cell_num[train_patient_num+i] < groupThreshold:  # 病人细胞数量少则补，并做数据增强  
+                while len(patient_data_X) < groupThreshold:
+                    # 生成第二维的随机排列索引
+                    np.random.seed(len(patient_data_X))
+                    shuffled_indices = np.random.permutation(patient_data_X.shape[1])
+                    # 打乱第二维
+                    shuffled_X = patient_data_X[:, shuffled_indices, :]
+                    shuffled_Y = patient_data_Y
+                    patient_data_X = np.vstack((patient_data_X, shuffled_X))
+                    patient_data_Y = np.hstack((patient_data_Y, shuffled_Y))
+            patient_cell_num[train_patient_num+i] = len(patient_data_X)
+                
+            new_X.append(patient_data_X)
+            new_Y.append(patient_data_Y)
+
+        self.X = np.vstack(new_X)  # 422
+        self.Y = np.hstack(new_Y)
+        np.random.seed(1234)
+        self.patient_cell_num = patient_cell_num[train_patient_num:]
+
+
+    def __getitem__(self, index):
+        x, y = self.X[index], self.Y[index]
+        x_origin = x.copy()
+        
+        if self.args.model == 'Transformer':
+            return np.float32(x), np.float32(y), np.float32(x_origin)
+        else:
+            return np.float32(x.flatten()), np.int32(y), np.float32(x_origin)
+
+    def __len__(self):
+        return len(self.X)
+    
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str, choices=['SVM', 'DNN', 'ATTDNN', 'preDN', 'DNNATT', 'UDNN', 'Resume', 'Transformer'], default='Transformer')
@@ -133,7 +236,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     SomeUtils.try_make_dir(args.save_dir)
-    # args.device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
     args.device = torch.device('cpu')
     args.shuffle = False
     args.deterministic = True
@@ -141,27 +243,13 @@ if __name__ == '__main__':
     """
     Read Data
     """
-    # discard_protein_ID_list = [5, 6, 7, 11, 13, 14]
-    # discard_protein_ID_list = [5, 6, 10, 12]
-    if args.dataset == 'Data/DataInPatientsUmap':
-        trainset = AMLDataset.AMLDataset(args, True)
-        testset = AMLDataset.AMLDataset(args, False)
-        if args.deterministic:
-            trainloader = DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=16, worker_init_fn=np.random.seed(1234))
-            testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=False, num_workers=16, worker_init_fn=np.random.seed(1234))
-        else:
-            trainloader = DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=16)
-            testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=False, num_workers=16)
-    else:
-        discard_protein_ID_list = []
-        trainset = AMLDataset.AMLDataset(args, True, setZeroClassNum=discard_protein_ID_list)
-        testset = AMLDataset.AMLDataset(args, False, setZeroClassNum=discard_protein_ID_list)
-        if args.deterministic:
-            trainloader = DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=16, worker_init_fn=np.random.seed(1234))
-            testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=False, num_workers=16, worker_init_fn=np.random.seed(1234))
-        else:
-            trainloader = DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=16)
-            testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=False, num_workers=16)
+    # trainset = AMLDataset(args, True)
+    testset = AMLDataset(args, False)
+    
+    # trainloader = DataLoader(trainset, batch_size=args.batchsize, shuffle=True, num_workers=16, worker_init_fn=np.random.seed(1234))
+    testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=False, num_workers=16, worker_init_fn=np.random.seed(1234))
+
+    
 
     """
     Choose model
@@ -169,15 +257,11 @@ if __name__ == '__main__':
     # 单独测试
     file = torch.load(args.test_model_path, map_location=args.device)
     model, epoch, accuracy = file['model'], file['epoch'], file['accuracy']
-
     model.to(args.device)
 
-    if args.device == torch.device('cuda') and torch.cuda.device_count()>1:
-        model = torch.nn.DataParallel(model, range(torch.cuda.device_count()))  # 并行
-    cudnn.benchmark = True  # 统一输入大小的情况下能加快训练速度
 
 
-###############################################################################################
+    ###############################################################################################
     # set up a logger
     logger = setup_logger(args.model+'_'+args.optimizer, args.save_dir, 0, args.model+'_'+args.optimizer+'_testlog.txt', mode='w+')
     best_result = 100
@@ -186,38 +270,46 @@ if __name__ == '__main__':
     TEST
     """
     logger.info('='*20+'Testing Model'+'='*20)
-    new_best, auc = test(best_result, args, model, epoch, testloader, logger, discard_protein_name='All reserved', color_num=3)
+    new_best, auc, predicted_list, target_list = test(best_result, args, model, epoch, testloader, logger, discard_protein_name='All reserved', color_num=3)
 
-    # # 去掉一个测试对结果的影响
-    # ablation_dic = dict()
-    # protein_list = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR']
-    # # protein_list = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'HLA-DR']
-    # for i in range(len(protein_list)):
-    #     if protein_list[i] in 'DR':
-    #         continue
-    #     if i not in discard_protein_ID_list:
-    #         if i == 14:
-    #             testset = AMLDataset.AMLDataset(args, False, [i-1, i])
-    #         else:
-    #             testset = AMLDataset.AMLDataset(args, False, [i])
-    #         testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=True, num_workers=16, worker_init_fn=np.random.seed(1234))
-    #         new_best, auc = test(best_result, args, model, epoch, testloader, logger, discard_protein_name=protein_list[i], color_num=i)  # 6.3589s
-    #         ablation_dic[protein_list[i]] = [new_best, auc]
-    # print(ablation_dic)
-    # np.save('Results/Test/AUC_dic.npy', AUC_dic)
+    patient_cell_num = testset.patient_cell_num
+    start = 0
+    correct_patient = 0
+    score_list = []
+    target_patient_list = []
+    predicted_list, target_list = np.array(predicted_list), np.array(target_list)
+    for i in range(len(patient_cell_num)):
+        group_num = patient_cell_num[i]
+        correct = np.sum(predicted_list[start: start+group_num] == target_list[start: start+group_num])
+        if correct > (group_num//2):
+            correct_patient += 1
 
-    # ablation_dic_001 = {'SSC-A': [62.83185840707964, 0.8620053655264923], 'FSC-A': [80.53097345132744, 0.9057679409792085], 'FSC-H': [60.176991150442475, 0.9076123407109322], 'CD7': [62.83185840707964, 0.8253688799463448], 'CD11B': [78.76106194690266, 0.9618544600938967], 'CD13': [82.30088495575221, 0.9858316566063046], 'CD19': [81.85840707964601, 0.9936284372904092], 'CD33': [81.85840707964601, 0.9891851106639838], 'CD34': [42.0353982300885, 0.9897719651240777], 'CD38': [89.38053097345133, 0.9771965124077799], 'CD45': [83.1858407079646, 0.9746814218645203], 'CD56': [95.13274336283186, 0.9866700201207242], 'CD117': [71.68141592920354, 0.9539738430583502], 'HLA-DR': [91.15044247787611, 0.9315057008718981]}
-    # ablation_dic_002 = {'SSC-A': [48.95104895104895, 0.9585127201565559], 'FSC-A': [65.03496503496504, 0.9906066536203523], 'FSC-H': [65.03496503496504, 0.9886497064579256], 'CD7': [79.02097902097903, 0.997651663405088], 'CD11B': [92.3076923076923, 0.9818003913894324], 'CD13': [90.9090909090909, 0.9927592954990214], 'CD33': [50.34965034965035, 0.9473581213307241], 'CD34': [62.93706293706294, 0.6796477495107632], 'CD38': [54.54545454545455, 0.3273972602739726], 'CD45': [65.03496503496504, 0.585518590998043], 'CD56': [100.0, 1.0], 'CD117': [91.60839160839161, 0.9972602739726028], 'HLA-DR': [86.01398601398601, 0.9937377690802348]}
+        if np.unique(target_list[start: start+group_num])[0] == 1:
+            score_list.append(float(correct)/float(group_num))
+        else:
+            score_list.append(1-(float(correct)/float(group_num)))
+        target_patient_list.append(np.unique(target_list[start: start+group_num])[0])
 
+        start += group_num
 
+    print('correct patient num: ', correct_patient, 'ratio: ', float(correct_patient)/float(len(patient_cell_num)))
 
-    # 剪除蛋白组
-    # if '002' in args.save_dir:
-    #     pass
-    # else:  # 001
-    #     protein_list = ['SSC-A', 'FSC-A', 'FSC-H', 'CD7', 'CD11B', 'CD13', 'CD19', 'CD33', 'CD34', 'CD38', 'CD45', 'CD56', 'CD117', 'DR', 'HLA-DR']
-    #     discard_protein_ID_list = [5, 6, 7, 11, 13, 14]
-    #     testset = AMLDataset.AMLDataset(args, False, discard_protein_ID_list)
-    #     testloader = DataLoader(testset, batch_size=args.batchsize, shuffle=True, num_workers=16, worker_init_fn=np.random.seed(1234))
-    #     new_best = test(best_result, args, model, epoch, testloader, logger)
-###############################################################################################
+    # AUC(Area Under Curve), ROC(Receiver Operating Characteristic)，正样本为0(M2)
+    fig, ax = plt.subplots()
+    fpr, tpr, thresholds = metrics.roc_curve(target_patient_list, -np.array(score_list), pos_label=0)
+    
+    auc = metrics.auc(fpr, tpr)
+    logger.info('AUC: {}'.format(auc))
+
+    colors = ['pink', 'grey', 'rosybrown', 'red', 'chocolate', 'tan', 'orange', 'lawngreen', 'darkgreen', 'aquamarine', 'dodgerblue', 'blue', 'darkviolet', 'magenta', 'brown', 'black']
+    ax.plot(fpr, tpr, label=round(auc, 3), color=colors[3])
+    ax.legend()
+    ax.set_xlabel("FPR", fontweight='bold')
+    ax.set_ylabel("TPR", fontweight='bold')
+    ax.set_xlim([0, 1])
+    ax.set_ylim([0, 1])
+    for tick in ax.get_xticklabels():
+        tick.set_fontweight('bold')
+    for tick in ax.get_yticklabels():
+        tick.set_fontweight('bold')
+    plt.savefig(args.save_dir+'/AUC.png', dpi=900)

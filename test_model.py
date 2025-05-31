@@ -79,7 +79,7 @@ def test(best_result, args, model, epoch, testloader, logger, model_att=None, di
         tick.set_fontweight('bold')
     for tick in ax.get_yticklabels():
         tick.set_fontweight('bold')
-    plt.savefig(args.save_dir+'/AUC.png', dpi=600)
+    plt.savefig(args.save_dir+'/AUC.png', dpi=900)
 
     accuracy = 100. * float(correct) / float(total)
     logger.info("\n| Validation Epoch #%d\t\t\taccuracy =  %.4f" % (epoch, accuracy))

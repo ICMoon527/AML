@@ -207,16 +207,20 @@ def getPatientScaledDataXY(max_length=100000):
                 Umap_2_max = Umap_2_max if Umap_2_max > np.max(numpy_data[:,1]) else np.max(numpy_data[:,1])
                 Umap_2_min = Umap_2_min if Umap_2_min < np.min(numpy_data[:,1]) else np.min(numpy_data[:,1])
 
-                patient_cell_num.append([int(file.split('_')[1]), numpy_data.shape[0]])
+                # patient_cell_num.append([int(file.split('_')[1]), numpy_data.shape[0]])
+                cell_group_num = 0
                 # 截长补短
                 while numpy_data.shape[0] >= max_length:
                     X_train.append(numpy_data[:max_length])
                     Y_train.append(int(file.split('_')[-1][0]))  # 0:M2, 1:M5
                     numpy_data = numpy_data[max_length:]
+                    cell_group_num += 1
                 if len(numpy_data) > 0:
                     X_train.append(numpy_data)
                     Y_train.append(int(file.split('_')[-1][0]))  # 0:M2, 1:M5
+                    cell_group_num += 1
                 
+                patient_cell_num.append(cell_group_num)
                 # Y_train.append(int(file.split('_')[-1][0]))  # 0:M2, 1:M5
 
     # standarize
@@ -226,7 +230,7 @@ def getPatientScaledDataXY(max_length=100000):
         X_train[i] = torch.tensor(X_train[i])
 
     X_train = torch.nn.utils.rnn.pad_sequence(X_train, batch_first=True, padding_value=0)
-    return np.array(X_train), np.array(Y_train)
+    return np.array(X_train), np.array(Y_train), patient_cell_num
 
 def plotHistogram(n_patients, cluster_counts, cluster_counts_df, n_clusters=3):
     patient_id = np.random.randint(0, n_patients)  # Random patient

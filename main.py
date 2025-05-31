@@ -19,7 +19,7 @@ import torch.nn as nn
 from lion_pytorch import Lion
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts, ExponentialLR
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5,6"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5,6"
 # if torch.cuda.is_available():
 #     class_weights = class_weights.cuda()
 
@@ -33,6 +33,9 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
     total = 0
     correct = 0
     accuracy = 0
+    test_accuracy = 0
+    test_loss_cpu = 0
+    train_loss_cpu = 0
     global best_acc
 
     # update lr for this epoch
@@ -72,6 +75,7 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
         # loss = criterion(out, targets) # Loss for CE loss
         loss.backward()
         optimizer.step()
+        train_loss_cpu += loss.detach().item()
 
         if batch_idx % 1 == 0:
             _, predicted = torch.max(out.detach(), 1)
@@ -84,7 +88,7 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
                                 accuracy,
                                 correct, total))
             
-    if epoch % 1 == 0:
+    if epoch % args.val_delta == 0:
         model.eval()
         correct = 0.
         total = 0
@@ -100,6 +104,8 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
             if model_att is not None:
                 inputs = model_att(inputs)
             out = model(inputs)  # (batch, nClasses)
+            test_loss = criterion(out, F.one_hot(targets.long(), num_classes=args.nClasses).float()) # Loss for focal loss
+            test_loss_cpu += test_loss.detach().item()
             _, predicted = torch.max(out.detach(), 1)
             correct += predicted.eq(targets.detach()).sum().item()
             total += targets.size(0)
@@ -111,7 +117,6 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
         target_list = np.hstack(target_list)
 
         test_accuracy = 100. * float(correct) / float(total)
-        test_accuracy_list.append(test_accuracy)
         logger.info("\n| Validation Epoch #%d\t\t\taccuracy =  %.4f" % (epoch, test_accuracy))
 
         # 保存模型
@@ -135,7 +140,7 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
 
             torch.save(state, os.path.join(args.save_dir, prefix+'checkpoint.t7'))
 
-    return loss.detach().item(), accuracy
+    return train_loss_cpu, accuracy, test_loss_cpu, test_accuracy
 
 def test(best_result, args, model, epoch, testloader, logger, model_att=None):
     model.eval()
@@ -213,9 +218,12 @@ if __name__ == '__main__':
     parser.add_argument('--test_model_path', default='Results/DNN-notShuffle-dropout0d4/DNN_Adam_98.23_checkpoint.t7', type=str)
     parser.add_argument('-shuffle', '--shuffle', action='store_true')
     parser.add_argument("--max_length", type=int, default=10000)
+    parser.add_argument("--val_delta", type=int, default=20)
 
     args = parser.parse_args()
     args.train = True
+    torch.cuda.empty_cache()
+    os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:128'  # 减少碎片
 
     if args.deterministic:  # 方便复现
         print('\033[31mModel Deterministic\033[0m')
@@ -379,7 +387,7 @@ if __name__ == '__main__':
     logger.info(model)
     logger.info('='*20+'Training Model'+'='*20)
     elapsed_time = 0
-    loss_list, accuracy_list = [], []
+    loss_list, accuracy_list, test_loss_list = [], [], []
     start_epoch = 0
     if args.model == 'Resume':
             start_epoch = file['epoch']
@@ -404,14 +412,20 @@ if __name__ == '__main__':
         lr_list.append(optimizer.param_groups[0]['lr'])
 
         start_time = time.time()
-        loss, accuracy = train(args, model, optimizer, epoch, trainloader, trainset, logger)
+        loss, accuracy, test_loss, test_accuracy = train(args, model, optimizer, epoch, trainloader, trainset, logger)
         epoch_time = time.time() - start_time
         elapsed_time += epoch_time
         logger.info('| Elapsed time : %d:%02d:%02d' % (SomeUtils.get_hms(elapsed_time)))
 
         scheduler.step()
         loss_list.append(loss)
+        test_loss_list.append(test_loss)
         accuracy_list.append(accuracy)  # train accuracy
+        test_accuracy_list.append(test_accuracy)
+
+        # # 早停
+        # if epoch == 1001:
+        #     break
 
     """
     TEST
@@ -425,9 +439,11 @@ if __name__ == '__main__':
     """
     prefix = args.model + '_' + args.optimizer + '_' + 'SKFold_10000' + '_'
     if new_best > best_result:  # accuracy
+        SomeUtils.draw_train_test(args, loss_list, test_loss_list, prefix+'Train_Test_Loss')
         SomeUtils.draw_fig(args, loss_list, prefix+'Train_Loss')
         SomeUtils.draw_fig(args, test_accuracy_list, prefix+'Test_Accuracy')
         SomeUtils.draw_fig(args, accuracy_list, prefix+'Train_Accuracy')
+        
     SomeUtils.draw_fig(args, lr_list, prefix+'Learning Rate')
 
     """
