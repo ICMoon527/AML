@@ -4,7 +4,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6 ~/anaconda3/envs/pytorch/bin/python main.py \
 --model Transformer \
 --optimizer Lion \
 --max_length 10000 \
---lr 1.4e-6 \
+--lr 3.5e-6 \
 --warmup_steps 10 \
 --warmup_start_lr 1e-8 \
 --power 0.5 \
@@ -14,8 +14,8 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6 ~/anaconda3/envs/pytorch/bin/python main.py \
 --device cuda \
 --nonlin elu \
 --save_dir ./Results/UMAP_Results \
---weight_decay 0.1 \
---dropout_rate 0.01 \
+--weight_decay 0.0001 \
+--dropout_rate 0.0 \
 --input_droprate 0.0 \
 --test_model_path Results/DNN-notShuffle-dropout0d5/DNN_Adam_98.23_checkpoint.t7 \
 -deterministic

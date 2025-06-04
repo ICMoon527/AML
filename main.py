@@ -17,14 +17,15 @@ import numpy as np
 from torch.autograd import Variable
 import torch.nn as nn
 from lion_pytorch import Lion
-from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts, ExponentialLR
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts, ExponentialLR, OneCycleLR
+import gc
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5,6"
 # if torch.cuda.is_available():
 #     class_weights = class_weights.cuda()
 
 # criterion = nn.CrossEntropyLoss()
-criterion = FocalLoss.FocalLossV1()  # To the best results
+criterion = FocalLoss.FocalLossV1(alpha=0.36, gamma=2)  # To the best results
 lr_list, test_accuracy_list = [], []
 best_acc = 0
 
@@ -75,6 +76,8 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
         # loss = criterion(out, targets) # Loss for CE loss
         loss.backward()
         optimizer.step()
+        # if epoch >= args.epochs*0.6:
+        #     scheduler.step()  # for one cycle
         train_loss_cpu += loss.detach().item()
 
         if batch_idx % 1 == 0:
@@ -96,28 +99,31 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
         predicted_list = []
         target_list = []
 
-        for batch_idx, (inputs, targets, _) in enumerate(testloader):
-            if args.device == torch.device('cuda'):
-                inputs, targets = inputs.cuda(), targets.cuda()
-            inputs, targets = Variable(inputs, requires_grad=False), Variable(targets)
+        with torch.no_grad():
+            for batch_idx, (inputs, targets, _) in enumerate(testloader):
+                if args.device == torch.device('cuda'):
+                    inputs, targets = inputs.cuda(), targets.cuda()
+                inputs, targets = Variable(inputs, requires_grad=False), Variable(targets)
 
-            if model_att is not None:
-                inputs = model_att(inputs)
-            out = model(inputs)  # (batch, nClasses)
-            test_loss = criterion(out, F.one_hot(targets.long(), num_classes=args.nClasses).float()) # Loss for focal loss
-            test_loss_cpu += test_loss.detach().item()
-            _, predicted = torch.max(out.detach(), 1)
-            correct += predicted.eq(targets.detach()).sum().item()
-            total += targets.size(0)
+                if model_att is not None:
+                    inputs = model_att(inputs)
+                out = model(inputs)  # (batch, nClasses)
+                test_loss = criterion(out, F.one_hot(targets.long(), num_classes=args.nClasses).float()) # Loss for focal loss
+                test_loss_cpu += test_loss.detach().item()
+                _, predicted = torch.max(out.detach(), 1)
+                correct += predicted.eq(targets.detach()).sum().item()
+                total += targets.size(0)
 
-            predicted_list.append(predicted.cpu().numpy())
-            target_list.append(targets.cpu().numpy())
+                predicted_list.append(predicted.cpu().numpy())
+                target_list.append(targets.cpu().numpy())
         
         predicted_list = np.hstack(predicted_list)
         target_list = np.hstack(target_list)
 
         test_accuracy = 100. * float(correct) / float(total)
+        train_loss_cpu = train_loss_cpu/17.86
         logger.info("\n| Validation Epoch #%d\t\t\taccuracy =  %.4f" % (epoch, test_accuracy))
+        logger.info('\n| training loss = %.8f\t\t\ttest loss = %.8f' % (train_loss_cpu, test_loss_cpu))
 
         # 保存模型
         logger.info('\n| Saving better model...\t\t\taccuracy = %.4f' % (test_accuracy))
@@ -140,6 +146,8 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
 
             torch.save(state, os.path.join(args.save_dir, prefix+'checkpoint.t7'))
 
+    torch.cuda.empty_cache()
+    gc.collect()
     return train_loss_cpu, accuracy, test_loss_cpu, test_accuracy
 
 def test(best_result, args, model, epoch, testloader, logger, model_att=None):
@@ -150,21 +158,22 @@ def test(best_result, args, model, epoch, testloader, logger, model_att=None):
     predicted_list = []
     target_list = []
 
-    for batch_idx, (inputs, targets, _) in enumerate(testloader):
-        if args.device == torch.device('cuda'):
-            inputs, targets = inputs.cuda(), targets.cuda()
-        inputs, targets = Variable(inputs, requires_grad=False), Variable(targets)
+    with torch.no_grad():
+        for batch_idx, (inputs, targets, _) in enumerate(testloader):
+            if args.device == torch.device('cuda'):
+                inputs, targets = inputs.cuda(), targets.cuda()
+            inputs, targets = Variable(inputs, requires_grad=False), Variable(targets)
 
-        if model_att is not None:
-            inputs = model_att(inputs)
-        print(inputs.shape)
-        out = model(inputs)  # (batch, nClasses)
-        _, predicted = torch.max(out.detach(), 1)
-        correct += predicted.eq(targets.detach()).sum().item()
-        total += targets.size(0)
+            if model_att is not None:
+                inputs = model_att(inputs)
+            print(inputs.shape)
+            out = model(inputs)  # (batch, nClasses)
+            _, predicted = torch.max(out.detach(), 1)
+            correct += predicted.eq(targets.detach()).sum().item()
+            total += targets.size(0)
 
-        predicted_list.append(predicted.cpu().numpy())
-        target_list.append(targets.cpu().numpy())
+            predicted_list.append(predicted.cpu().numpy())
+            target_list.append(targets.cpu().numpy())
     
     predicted_list = np.hstack(predicted_list)
     target_list = np.hstack(target_list)
@@ -218,7 +227,7 @@ if __name__ == '__main__':
     parser.add_argument('--test_model_path', default='Results/DNN-notShuffle-dropout0d4/DNN_Adam_98.23_checkpoint.t7', type=str)
     parser.add_argument('-shuffle', '--shuffle', action='store_true')
     parser.add_argument("--max_length", type=int, default=10000)
-    parser.add_argument("--val_delta", type=int, default=20)
+    parser.add_argument("--val_delta", type=int, default=1)
 
     args = parser.parse_args()
     args.train = True
@@ -366,7 +375,8 @@ if __name__ == '__main__':
         optimizer.load_state_dict(file['optimizer'])
 
     
-    scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=50, eta_min=1e-10)
+    scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=100, eta_min=1e-7)
+    # scheduler = OneCycleLR(optimizer, max_lr=args.lr, epochs=args.epochs, steps_per_epoch=len(trainloader), pct_start=0.3)
     # scheduler = ExponentialLR(optimizer, gamma=0.9)
 
 ###############################################################################################
@@ -395,8 +405,9 @@ if __name__ == '__main__':
     current_lr = args.lr
     for epoch in range(start_epoch+1, 1+args.epochs):
 
-        # # 在第3000个epoch时调整基础学习率
-        # if epoch == 2500 or epoch == 4000 or epoch == 4900:
+        # 在第3000个epoch时调整基础学习率
+        # if epoch == args.epochs*0.6:
+        #     scheduler = OneCycleLR(optimizer, max_lr=args.lr, epochs=int(args.epochs*0.4), steps_per_epoch=len(trainloader), pct_start=0.3)
         #     scheduler.T_cur = 0  # 重置当前周期内的epoch计数器
         #     scheduler.T_i = scheduler.T_0  # 重置周期长度为初始值
         #     # 修改调度器的初始学习率（减半）
@@ -406,8 +417,8 @@ if __name__ == '__main__':
         #         param_group['lr'] = scheduler.base_lrs[i]        # 立即生效
         #     scheduler.last_epoch = epoch  # 更新调度器的全局epoch计数器
 
-        params = sum([np.prod(p.size()) for p in model.parameters()])
-        logger.info('|  Number of Trainable Parameters: ' + str(params))
+        # params = sum([np.prod(p.size()) for p in model.parameters()])
+        # logger.info('|  Number of Trainable Parameters: ' + str(params))
         logger.info('\n=> Training Epoch #%d, LR=%.8f' % (epoch, optimizer.param_groups[0]['lr']))
         lr_list.append(optimizer.param_groups[0]['lr'])
 
@@ -417,11 +428,16 @@ if __name__ == '__main__':
         elapsed_time += epoch_time
         logger.info('| Elapsed time : %d:%02d:%02d' % (SomeUtils.get_hms(elapsed_time)))
 
-        scheduler.step()
+        # if epoch < args.epochs*0.6:
+        scheduler.step()  # for Cos Warm
         loss_list.append(loss)
         test_loss_list.append(test_loss)
         accuracy_list.append(accuracy)  # train accuracy
         test_accuracy_list.append(test_accuracy)
+
+        if epoch % 100 == 1:
+            prefix = args.model + '_' + args.optimizer + '_' + 'SKFold_10000' + '_'
+            SomeUtils.draw_train_test(args, loss_list, test_loss_list, prefix+'Train_Test_Loss', epoch=epoch)
 
         # # 早停
         # if epoch == 1001:
@@ -445,6 +461,8 @@ if __name__ == '__main__':
         SomeUtils.draw_fig(args, accuracy_list, prefix+'Train_Accuracy')
         
     SomeUtils.draw_fig(args, lr_list, prefix+'Learning Rate')
+    np.save('Results/UMAP_Results/trainloss.npy', np.array(loss_list))
+    np.save('Results/UMAP_Results/testloss.npy', np.array(test_accuracy_list))
 
     """
     Test Again after Loading Model

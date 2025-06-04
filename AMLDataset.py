@@ -4,6 +4,9 @@ from sklearn.model_selection import train_test_split, StratifiedKFold
 import numpy as np
 import torch
 from UnsupSajid import getPatientScaledDataXY
+import time
+
+rng_data = np.random.RandomState(seed=int(time.time()))  # 数据增强专用
 
 class AMLDataset(Dataset):
     def __init__(self, args, isTrain=True, setZeroClassNum=None) -> None:
@@ -43,10 +46,10 @@ class AMLDataset(Dataset):
         '''
         其他数据操作
         '''
-        # if isTrain:
+        if isTrain:
         #     self.X, self.Y = self.dataMixing(self.X, self.Y)  # 把训练集的病人流式细胞信息混合
-        #     self.X, self.Y = self.dataAugmentation(self.X, self.Y, range_=10, times=2)
-        #     self.X, self.Y = self.addPerturbation(self.X, self.Y, 0.1)
+            self.X, self.Y = self.dataAugmentation(self.X, self.Y, range_=2)
+            self.X, self.Y = self.addPerturbation(self.X, self.Y, 0.1)
         #     self.X = self.X / np.max(self.X)
         # np.random.seed(1234)
         # self.fix_indices = np.random.choice(np.arange(len(self.X[0])), replace=False,
@@ -59,6 +62,9 @@ class AMLDataset(Dataset):
     def __getitem__(self, index):
         x, y = self.X[index], self.Y[index]
         x_origin = x.copy()
+        if self.isTrain:
+            shuffled_indices = rng_data.permutation(x.shape[0])
+            x = x[shuffled_indices, :]
         # if self.args.input_droprate > 0:
         #     """
         #     some detectors fail
@@ -92,7 +98,7 @@ class AMLDataset(Dataset):
         count = np.sum(array>threshold)
         return count
 
-    def dataAugmentation(self, input, target, range_=10, times=2):
+    def dataAugmentation(self, input, target, range_=2, times=2):
         input_charac_num = int(input.shape[-1])
         if self.isTrain:
             # 训练阶段，复制多份数据，并在选定范围内缩放，默认上下浮动20%
@@ -100,9 +106,9 @@ class AMLDataset(Dataset):
             new_Y = np.expand_dims(target, axis=0)
             new_X = np.repeat(new_X, 2*range_+1, axis=0)
             new_Y = np.repeat(new_Y, 2*range_+1, axis=0)
-            for i in range(2*range_+1):
-                new_X[i] = new_X[i] / 100. * (100+times*(i-range_))  # scale
-            new_X = new_X.reshape(-1, self.args.length, input_charac_num)
+            # for i in range(2*range_+1):
+            #     new_X[i] = new_X[i] / 100. * (100+times*(i-range_))  # scale
+            new_X = new_X.reshape(-1, self.args.max_length, input_charac_num)
             new_Y = new_Y.reshape(-1)
             return new_X, new_Y
         else:
@@ -119,7 +125,7 @@ class AMLDataset(Dataset):
     def addPerturbation(self, x, y, scale=0.01):
         if self.isTrain:
             # 训练阶段，对训练数据加入随机百分比微扰
-            scale = np.random.random(x.shape) * scale * 2 - scale  # (-scale, scale)
+            scale = rng_data.random(x.shape) * scale * 2 - scale  # (-scale, scale)
             x = x * (scale+1)
             return x, y
         else:
@@ -199,14 +205,14 @@ if __name__ == '__main__':
     import argparse
     import torch
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, choices=['SVM', 'DNN', 'ATTDNN', 'preDN', 'DNNATT', 'UDNN', 'Resume'], default='DNN')
+    parser.add_argument('--model', type=str, choices=['SVM', 'DNN', 'ATTDNN', 'preDN', 'DNNATT', 'UDNN', 'Resume', 'Transformer'], default='Transformer')
     parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--batchsize", type=int, default=128)
-    parser.add_argument("--length", type=int, default=10000)
+    parser.add_argument("--batchsize", type=int, default=1)
+    parser.add_argument("--length", type=int, default=1000)
     parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else 'cpu')
-    parser.add_argument('--optimizer', default='Adam', type=str, choices=['SGD','Adam','Adamax'])
-    parser.add_argument('--save_dir', default='./Results/DNN', type=str)
+    parser.add_argument('--optimizer', default='Adam', type=str, choices=['SGD','Adam','Adamax', 'Lion'])
+    parser.add_argument('--save_dir', default='./Results/UMAP_Results', type=str)
     parser.add_argument('--nonlin', default="elu", type=str, choices=["relu", "elu", "softplus", 'sigmoid'])
     parser.add_argument('--weight_decay', default=0., type=float, help='coefficient for weight decay')
     parser.add_argument('-deterministic', '--deterministic', dest='deterministic', action='store_true',
@@ -215,15 +221,17 @@ if __name__ == '__main__':
     parser.add_argument('--warmup_start_lr', default=1e-5, type=float)
     parser.add_argument('--power', default=0.5, type=float)
     parser.add_argument('-batchnorm', '--batchnorm', action='store_true')
-    parser.add_argument('--dropout_rate', default=0., type=float)
+    parser.add_argument('--dropout_rate', default=0.1, type=float)
     parser.add_argument('--nClasses', default=2, type=int)
     parser.add_argument('--input_droprate', default=0., type=float, help='the max rate of the detectors may fail')
     parser.add_argument('--initial_dim', default=256, type=int)
     parser.add_argument('--continueFile', default='./Results/79sources/DNN-Adam-0-3000-largerRange-focalLoss/bk.t7', type=str)
     parser.add_argument('--dataset', default='Data/DataInPatientsUmap', type=str, choices=['Data/UsefulData','Data/UsefulData002', 'Data/DataInPatientsUmap'])
     parser.add_argument('-train', '--train', action='store_true')
-    parser.add_argument('--test_model_path', default='Results/DNN-notShuffle-dropout0d5/DNN_Adam_98.23_checkpoint.t7', type=str)
+    parser.add_argument('--test_model_path', default='Results/DNN-notShuffle-dropout0d4/DNN_Adam_98.23_checkpoint.t7', type=str)
     parser.add_argument('-shuffle', '--shuffle', action='store_true')
+    parser.add_argument("--max_length", type=int, default=10000)
+    parser.add_argument("--val_delta", type=int, default=20)
     args = parser.parse_args()
 
     object = AMLDataset(args)

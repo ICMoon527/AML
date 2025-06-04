@@ -9,9 +9,9 @@ import torch.cuda.amp as amp
 class FocalLossV1(nn.Module):
 
     def __init__(self,
-                 alpha=0.25,
+                 alpha=0.39,
                  gamma=2,
-                 reduction='mean',):
+                 reduction='mean'):
         super(FocalLossV1, self).__init__()
         self.alpha = alpha
         self.gamma = gamma

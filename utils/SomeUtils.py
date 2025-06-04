@@ -38,13 +38,19 @@ def draw_fig(args, data_list, name):
     import matplotlib
     matplotlib.use('Agg')  # FIX: tkinter.TclError: couldn't connect to display "localhost:11.0" 
     import matplotlib.pyplot as plt
-    x1 = range(args.val_delta, args.epochs+1, args.val_delta)
+
+    if 'Learning Rate' in name:
+        val_delta = 1
+    else:
+        val_delta = args.val_delta
+
+    x1 = range(val_delta, args.epochs+1, val_delta)
     y1 = data_list
 
     plt.cla()
     plt.title(name.split('_')[-1]+' vs. epoch', fontsize=15)
     # plt.plot(x1, y1, '.-')
-    plt.plot(x1, y1[args.val_delta-1::args.val_delta])
+    plt.plot(x1, y1[val_delta-1::val_delta])
     plt.xlabel('epoch', fontsize=15)
     plt.ylabel(name.split('_')[-1], fontsize=15)
     plt.grid()
@@ -52,10 +58,13 @@ def draw_fig(args, data_list, name):
 
     # plt.show()
 
-def draw_train_test(args, train_list, test_list, name):
+def draw_train_test(args, train_list, test_list, name, epoch=None):
     plt.figure(figsize=(10, 5))
     
-    epochs = range(args.val_delta, args.epochs+1, args.val_delta)
+    if epoch:
+        epochs = range(args.val_delta, epoch+1, args.val_delta)
+    else:
+        epochs = range(args.val_delta, args.epochs+1, args.val_delta)
     plt.plot(epochs, train_list[args.val_delta-1::args.val_delta], 'b-', label='Train Loss')
     plt.plot(epochs, test_list[args.val_delta-1::args.val_delta], 'r-', label='Test Loss')
     
@@ -69,6 +78,7 @@ def draw_train_test(args, train_list, test_list, name):
     # 自动调整y轴范围
     max_loss = max(max(train_list), max(test_list))
     plt.ylim(0, max_loss * 1.1)
+    plt.xlim(left=0)
     
     # 保存图片
     plt.savefig(args.save_dir+'/'+name+".png", dpi=900)
