@@ -46,10 +46,11 @@ class AMLDataset(Dataset):
         '''
         其他数据操作
         '''
-        if isTrain:
-        #     self.X, self.Y = self.dataMixing(self.X, self.Y)  # 把训练集的病人流式细胞信息混合
-            self.X, self.Y = self.dataAugmentation(self.X, self.Y, range_=2)
-            self.X, self.Y = self.addPerturbation(self.X, self.Y, 0.1)
+        # if isTrain:
+        # #     self.X, self.Y = self.dataMixing(self.X, self.Y)  # 把训练集的病人流式细胞信息混合
+        #     self.X, self.Y = self.dataAugmentation(self.X, self.Y, range_=2)
+        #     self.X, self.Y = self.addPerturbation(self.X, self.Y, 0.1)
+
         #     self.X = self.X / np.max(self.X)
         # np.random.seed(1234)
         # self.fix_indices = np.random.choice(np.arange(len(self.X[0])), replace=False,
@@ -62,9 +63,9 @@ class AMLDataset(Dataset):
     def __getitem__(self, index):
         x, y = self.X[index], self.Y[index]
         x_origin = x.copy()
-        if self.isTrain:
-            shuffled_indices = rng_data.permutation(x.shape[0])
-            x = x[shuffled_indices, :]
+        # if self.isTrain:
+        #     shuffled_indices = rng_data.permutation(x.shape[0])
+        #     x = x[shuffled_indices, :]
         # if self.args.input_droprate > 0:
         #     """
         #     some detectors fail

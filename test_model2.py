@@ -21,6 +21,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 AUC_dic = {}
+
 def test(best_result, args, model, epoch, testloader, logger, model_att=None, discard_protein_name=None, color_num=-1):
     model.eval()
     correct = 0.
@@ -29,6 +30,9 @@ def test(best_result, args, model, epoch, testloader, logger, model_att=None, di
     predicted_list = []
     target_list = []
     score_list = []
+
+    class_correct = [0, 0]  # 分别存储类别1和类别2的正确预测数
+    class_total = [0, 0]    # 分别存储类别1和类别2的总样本数
 
     for batch_idx, (inputs, targets, _) in enumerate(testloader):
         if args.device == torch.device('cuda'):
@@ -39,6 +43,13 @@ def test(best_result, args, model, epoch, testloader, logger, model_att=None, di
             inputs = model_att(inputs)
         out = model(inputs)  # (batch, nClasses)
         _, predicted = torch.max(out.detach(), 1)
+
+        # 分别统计每个类别的正确预测
+        for i in range(2):  # 二分类，类别标签假设为0和1
+            mask = (targets == i)
+            class_correct[i] += (predicted[mask] == targets[mask]).sum().item()
+            class_total[i] += mask.sum().item()
+
         correct += predicted.eq(targets.detach()).sum().item()
         total += targets.size(0)
         score = (out.detach().cpu().numpy())[:, 0]
@@ -54,6 +65,14 @@ def test(best_result, args, model, epoch, testloader, logger, model_att=None, di
     classification_report = metrics.classification_report(target_list, predicted_list, target_names=['Patient Type '+str(i+1) for i in range(2)])
     # 计算混淆矩阵
     cm = confusion_matrix(target_list, predicted_list)
+    # 计算每个类别的Accuracy
+    class_accuracy = {
+        0: class_correct[0] / class_total[0] if class_total[0] > 0 else 0,  # 类别1的Accuracy
+        1: class_correct[1] / class_total[1] if class_total[1] > 0 else 0   # 类别2的Accuracy
+    }
+
+    logger.info(f"类别1 Accuracy: {class_accuracy[0]:.4f} (样本数: {class_total[0]})")
+    logger.info(f"类别2 Accuracy: {class_accuracy[1]:.4f} (样本数: {class_total[1]})")
     # 可视化
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["M2 - Class 0", "M5 - Class 1"])
     disp.plot(cmap='Blues', values_format='d')  # 'd' 表示显示整数
@@ -62,13 +81,13 @@ def test(best_result, args, model, epoch, testloader, logger, model_att=None, di
     plt.clf()
     
     # AUC(Area Under Curve), ROC(Receiver Operating Characteristic)，正样本为0(M2)
-    fig, ax = plt.subplots()
     fpr, tpr, thresholds = metrics.roc_curve(target_list, score_list, pos_label=0)
     AUC_dic[discard_protein_name] = [fpr, tpr]
     auc = metrics.auc(fpr, tpr)
     logger.info('AUC: {}'.format(auc))
 
     colors = ['pink', 'grey', 'rosybrown', 'red', 'chocolate', 'tan', 'orange', 'lawngreen', 'darkgreen', 'aquamarine', 'dodgerblue', 'blue', 'darkviolet', 'magenta', 'brown', 'black']
+    fig, ax = plt.subplots()
     ax.plot(fpr, tpr, label=round(auc, 3), color=colors[color_num])
     ax.legend()
     ax.set_xlabel("FPR", fontweight='bold')
@@ -79,7 +98,7 @@ def test(best_result, args, model, epoch, testloader, logger, model_att=None, di
         tick.set_fontweight('bold')
     for tick in ax.get_yticklabels():
         tick.set_fontweight('bold')
-    plt.savefig(args.save_dir+'/AUC.png', dpi=600)
+    plt.savefig(args.save_dir+'/AUC'+str(color_num)+'.png', dpi=900)
 
     accuracy = 100. * float(correct) / float(total)
     logger.info("\n| Validation Epoch #%d\t\t\taccuracy =  %.4f" % (epoch, accuracy))
@@ -126,7 +145,7 @@ if __name__ == '__main__':
     parser.add_argument('--continueFile', default='./Results/79sources/DNN-Adam-0-3000-largerRange-focalLoss/bk.t7', type=str)
     parser.add_argument('--dataset', default='Data/DataInPatientsUmap', type=str, choices=['Data/UsefulData','Data/UsefulData002', 'Data/DataInPatientsUmap'])
     parser.add_argument('-train', '--train', action='store_true')
-    parser.add_argument('--test_model_path', default='Results/TestModelResults/91.45/Transformer_Lion_91.45_checkpoint.t7', type=str)
+    parser.add_argument('--test_model_path', default='Results/UMAP_Results/Transformer_Lion_96.15384615384616_5008_95.4059829711914_checkpoint.t7', type=str)
     parser.add_argument('-shuffle', '--shuffle', action='store_true')
     parser.add_argument("--max_length", type=int, default=10000)
 
@@ -186,7 +205,8 @@ if __name__ == '__main__':
     TEST
     """
     logger.info('='*20+'Testing Model'+'='*20)
-    new_best, auc = test(best_result, args, model, epoch, testloader, logger, discard_protein_name='All reserved', color_num=3)
+    new_best, auc = test(best_result, args, model, epoch, trainloader, logger, discard_protein_name='All reserved', color_num=3)
+    new_best, auc = test(best_result, args, model, epoch, testloader, logger, discard_protein_name='All reserved', color_num=-5)
 
     # # 去掉一个测试对结果的影响
     # ablation_dic = dict()

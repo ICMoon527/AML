@@ -19,13 +19,19 @@ import torch.nn as nn
 from lion_pytorch import Lion
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts, ExponentialLR, OneCycleLR
 import gc
+from utils.GHMLoss import GHM_Loss
+from utils.DiceLoss import DiceLoss, TverskyLoss
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5,6"
 # if torch.cuda.is_available():
 #     class_weights = class_weights.cuda()
 
 # criterion = nn.CrossEntropyLoss()
-criterion = FocalLoss.FocalLossV1(alpha=0.36, gamma=2)  # To the best results
+criterion = FocalLoss.FocalLossV1(alpha=0.49, gamma=2)  # To the best results
+# criterion = FocalLoss.BinaryFocalLossWithAlpha(gamma=2, alpha=0.99)
+# criterion = GHM_Loss(bins=10, alpha=0.5)
+# criterion = DiceLoss()
+# criterion = TverskyLoss()
 lr_list, test_accuracy_list = [], []
 best_acc = 0
 
@@ -72,8 +78,9 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
             inputs = model_att(inputs)  # 前面预训练网络的输出
 
         out = model(inputs)
-        loss = criterion(out, F.one_hot(targets.long(), num_classes=args.nClasses).float()) # Loss for focal loss
+        # loss = criterion(out, F.one_hot(targets.long(), num_classes=args.nClasses).float()) # Loss for focal loss
         # loss = criterion(out, targets) # Loss for CE loss
+        loss = criterion(out, F.one_hot(targets.long(), num_classes=args.nClasses).float()) # Loss for GHM loss
         loss.backward()
         optimizer.step()
         # if epoch >= args.epochs*0.6:
@@ -108,7 +115,8 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
                 if model_att is not None:
                     inputs = model_att(inputs)
                 out = model(inputs)  # (batch, nClasses)
-                test_loss = criterion(out, F.one_hot(targets.long(), num_classes=args.nClasses).float()) # Loss for focal loss
+                # test_loss = criterion(out, F.one_hot(targets.long(), num_classes=args.nClasses).float()) # Loss for focal loss
+                test_loss = criterion(out, F.one_hot(targets.long(), num_classes=args.nClasses).float()) # Loss for GHM loss
                 test_loss_cpu += test_loss.detach().item()
                 _, predicted = torch.max(out.detach(), 1)
                 correct += predicted.eq(targets.detach()).sum().item()
@@ -121,28 +129,27 @@ def train(args, model, optimizer, epoch, trainloader, trainset, logger, model_at
         target_list = np.hstack(target_list)
 
         test_accuracy = 100. * float(correct) / float(total)
-        train_loss_cpu = train_loss_cpu/17.86
+        train_loss_cpu = train_loss_cpu/2.825/5.
         logger.info("\n| Validation Epoch #%d\t\t\taccuracy =  %.4f" % (epoch, test_accuracy))
         logger.info('\n| training loss = %.8f\t\t\ttest loss = %.8f' % (train_loss_cpu, test_loss_cpu))
-
-        # 保存模型
-        logger.info('\n| Saving better model...\t\t\taccuracy = %.4f' % (test_accuracy))
-        state = {
-            'model': model.module if isinstance(model, torch.nn.DataParallel) else model,
-            'optimizer':optimizer.state_dict(),
-            'accuracy': test_accuracy,
-            'epoch': epoch,
-        }
         
-        prefix = args.model + '_' + args.optimizer + '_' + str(test_accuracy) + '_'
-        # 中途保存防止意外
-        if test_accuracy >= best_acc:
-            best_acc = test_accuracy
-            # 删掉之前的
-            for root, dirs, files in os.walk(args.save_dir):
-                for file in files:
-                    if '.t7' in file and 'best' not in file:
-                        os.remove(os.path.join(root, file))
+        prefix = args.model + '_' + args.optimizer + '_' + str(test_accuracy) + '_' + str(epoch) + '_' + str(accuracy.detach().item()) + '_'
+        # 保存重要结果
+        accuracy = accuracy.detach().item()
+        if (test_accuracy > 92 and accuracy > 92) :  # 条件
+            # 保存模型
+            logger.info('\n| Saving better model...\t\t\taccuracy = %.4f' % (test_accuracy))
+            state = {
+                'model': model.module if isinstance(model, torch.nn.DataParallel) else model,
+                'optimizer':optimizer.state_dict(),
+                'accuracy': test_accuracy,
+                'epoch': epoch,
+            }
+            # # 删掉之前的
+            # for root, dirs, files in os.walk(args.save_dir):
+            #     for file in files:
+            #         if '.t7' in file and 'best' not in file:
+            #             os.remove(os.path.join(root, file))
 
             torch.save(state, os.path.join(args.save_dir, prefix+'checkpoint.t7'))
 
@@ -375,7 +382,7 @@ if __name__ == '__main__':
         optimizer.load_state_dict(file['optimizer'])
 
     
-    scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=100, eta_min=1e-7)
+    scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=100, eta_min=1e-10)
     # scheduler = OneCycleLR(optimizer, max_lr=args.lr, epochs=args.epochs, steps_per_epoch=len(trainloader), pct_start=0.3)
     # scheduler = ExponentialLR(optimizer, gamma=0.9)
 
@@ -405,9 +412,9 @@ if __name__ == '__main__':
     current_lr = args.lr
     for epoch in range(start_epoch+1, 1+args.epochs):
 
-        # 在第3000个epoch时调整基础学习率
-        # if epoch == args.epochs*0.6:
-        #     scheduler = OneCycleLR(optimizer, max_lr=args.lr, epochs=int(args.epochs*0.4), steps_per_epoch=len(trainloader), pct_start=0.3)
+        # # 在第3000个epoch时调整基础学习率
+        # if epoch == 501:
+        #     scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=100, eta_min=3.5e-8)
         #     scheduler.T_cur = 0  # 重置当前周期内的epoch计数器
         #     scheduler.T_i = scheduler.T_0  # 重置周期长度为初始值
         #     # 修改调度器的初始学习率（减半）
@@ -462,7 +469,7 @@ if __name__ == '__main__':
         
     SomeUtils.draw_fig(args, lr_list, prefix+'Learning Rate')
     np.save('Results/UMAP_Results/trainloss.npy', np.array(loss_list))
-    np.save('Results/UMAP_Results/testloss.npy', np.array(test_accuracy_list))
+    np.save('Results/UMAP_Results/testloss.npy', np.array(test_loss_list))
 
     """
     Test Again after Loading Model

@@ -65,14 +65,13 @@ def draw_train_test(args, train_list, test_list, name, epoch=None):
         epochs = range(args.val_delta, epoch+1, args.val_delta)
     else:
         epochs = range(args.val_delta, args.epochs+1, args.val_delta)
-    plt.plot(epochs, train_list[args.val_delta-1::args.val_delta], 'b-', label='Train Loss')
-    plt.plot(epochs, test_list[args.val_delta-1::args.val_delta], 'r-', label='Test Loss')
+    plt.plot(epochs, train_list[args.val_delta-1::args.val_delta], 'b-', label='Train Loss', lw=1.1)
+    plt.plot(epochs, test_list[args.val_delta-1::args.val_delta], 'r-', label='Validation Loss', lw=1.1)
     
     # 美化图形
-    plt.title('Training & Test Loss')
     plt.xlabel('Epochs', fontsize=15)
     plt.ylabel('Loss', fontsize=15)
-    plt.legend()
+    plt.legend(loc='upper right')
     plt.grid(True)
     
     # 自动调整y轴范围

@@ -3,6 +3,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.cuda.amp as amp
 
+class BinaryFocalLossWithAlpha(nn.Module):
+    def __init__(self, gamma=2, alpha=0.25):
+        super().__init__()
+        self.gamma = gamma
+        self.alpha = alpha  # alpha 控制正样本的权重
+
+    def forward(self, inputs, targets):
+        BCE_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction='none')
+        pt = torch.exp(-BCE_loss)  # 计算 p_t
+        loss = (self.alpha * (1-pt)**self.gamma * BCE_loss)  # 加入 alpha
+        return loss.mean()
 
 ##
 # version 1: use torch.autograd
